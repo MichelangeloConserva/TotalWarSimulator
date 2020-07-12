@@ -6,6 +6,7 @@ from pymunk.vec2d import Vec2d
 from scipy.optimize import linear_sum_assignment
 from sklearn.metrics import pairwise_distances
 from functools import reduce
+from scipy.spatial.transform import Rotation as R
 
 RED = (255, 0, 0)
 
@@ -67,7 +68,7 @@ class InfantryUnit:
     
     max_n = 30
     start_width = 10
-    start_height = 3    
+    start_height = 3
     
     @property
     def corners(self):
@@ -103,18 +104,44 @@ class InfantryUnit:
         
         self._is_selected = False
         self.col = col
-
+        
+        self.rot = rot
     
     def get_formation(self, pos):
         return get_formation(pos, self.width, self.height, Infantry.size, Infantry.dist)
     
     def move_at_pos(self, pos):
         new_form = self.get_formation(pos)    
+        
+        pos = Vec2d(pos)
+        unit_pos = Vec2d((0,0))
+        for s in self.soldiers: unit_pos += s.body.position / len(self.soldiers)
+
+        M = np.array(new_form) 
+        
+        if (unit_pos-pos).get_length_sqrd() > 10 and  (np.pi - (unit_pos-pos).angle) > np.pi/10:
+            self.rot = np.pi/2 + (unit_pos-pos).angle
+        
+        import matplotlib.pyplot as plt
+        # Rotation of the formation
+        M = M - pos
+        plt.scatter(*M.T)
+        r = R.from_euler('z', self.rot)
+        MR = r.apply(np.hstack((M,np.zeros((len(M),1)))))
+        MR = MR[:,:-1]
+        new_form = MR + pos
+        plt.scatter(*MR.T)
+        plt.title(self.rot*180/np.pi)
+        plt.show()
+        
+        
+        
         pd = pairwise_distances(self.soldiers_pos(), new_form)
         row_ind, col_ind = linear_sum_assignment(pd) # Find min cost assignment to final positions
         
         for i in range(len(row_ind)):
-            self.soldiers[row_ind[i]].dest = new_form[col_ind[i]]
+            self.soldiers[row_ind[i]].dest = Vec2d(new_form[col_ind[i]].tolist())
+    
     
     def soldiers_pos(self, numpy = True): 
         return [np.array(a.body.position) if numpy else a.body.position for a in self.soldiers]    
@@ -124,14 +151,12 @@ class InfantryUnit:
         
 
 
-
-
 class Infantry:
 
     size = 20
     mass = 1
     dist = size / 4
-    speed = 30
+    speed = 90
 
     def __init__(self, space, pos, rot, col):
         

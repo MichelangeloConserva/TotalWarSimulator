@@ -11,6 +11,7 @@ import pymunk.pygame_util
 from pymunk.vec2d import Vec2d
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_q, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from pymunk.pygame_util import from_pygame, to_pygame
+from time import time
 
 from characters import Army
 from utils import create_space, is_in_selection, is_on_enemy_unity
@@ -21,6 +22,7 @@ RED = (255, 0, 0)
 LEFT = 1
 RIGHT = 3
     
+
 def update(space, dt, surface):
     space.step(dt)
     for s in attacker.soldiers: s.update(dt)
@@ -42,7 +44,7 @@ draw_options = pymunk.pygame_util.DrawOptions(screen)
 
 
 drag = False
-start_pos = 0,0
+start_pos_lmb = 0,0
 selected_units = set()
 while True:
     
@@ -56,17 +58,19 @@ while True:
         elif event.type == MOUSEBUTTONDOWN:
             
             if event.button == LEFT:
-                start_pos = from_pygame(event.pos, screen)
+                start_pos_lmb = from_pygame(event.pos, screen)
                 drag = True
             
             elif event.button == RIGHT:
-                p = from_pygame(event.pos, screen)
+                start_pos_rmb = from_pygame(event.pos, screen)
                 
-                enemy_unit = is_on_enemy_unity(p, attacker)
+                enemy_unit = is_on_enemy_unity(start_pos_rmb, attacker)
                 if not enemy_unit is None:
                     for u in selected_units: u.attack(enemy_unit)
                 else:
-                    for u in selected_units: u.move_at_pos(p)
+                    start_pos_rmb = from_pygame(event.pos, screen)
+                    drag_rmb = True
+                    
                 
         elif event.type == MOUSEBUTTONUP:
             
@@ -76,7 +80,7 @@ while True:
                 selection = False
                 for u in attacker.units:
                     for s in u.soldiers:
-                        if is_in_selection(list(s.body.position), start_pos, end_pos): 
+                        if is_in_selection(list(s.body.position), start_pos_lmb, end_pos): 
                             u.is_selected = selection = True
                             selected_units.add(u)
                             break
@@ -85,7 +89,21 @@ while True:
                 if not selection:
                     for u in attacker.units: u.is_selected = False
                     selected_units = set()                
-                                
+                         
+            if event.button == RIGHT:
+                end_pos_rmb = from_pygame(event.pos, screen)
+                
+                if sum((np.array(start_pos_rmb)-np.array(end_pos_rmb))**2) < 30**2:
+                    for u in selected_units: u.move_at_pos(start_pos_rmb)
+                else:
+                    
+                    # TODO : implement right drag to draw formation
+                    print(start_pos_rmb, end_pos_rmb, sum((np.array(start_pos_lmb)-np.array(end_pos_rmb))**2))
+                drag_rmb = False
+
+
+
+
     
     screen.fill(pygame.color.THECOLORS["white"])
     space.debug_draw(draw_options)
