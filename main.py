@@ -25,7 +25,8 @@ RIGHT = 3
 
 def update(space, dt, surface):
     space.step(dt)
-    for s in attacker.soldiers: s.update(dt)
+    attacker.update(dt)
+    defender.update(dt)
     
     
 space = create_space(WIDTH, HEIGHT)
@@ -94,7 +95,7 @@ while True:
                 end_pos_rmb = from_pygame(event.pos, screen)
                 
                 if sum((np.array(start_pos_rmb)-np.array(end_pos_rmb))**2) < 30**2:
-                    for u in selected_units: u.move_at_pos(start_pos_rmb)
+                    for u in selected_units: u.dest = start_pos_rmb
                 else:
                     
                     # TODO : implement right drag to draw formation

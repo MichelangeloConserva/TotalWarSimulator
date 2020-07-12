@@ -62,7 +62,9 @@ class Army:
     @property
     def soldiers(self): return reduce(lambda acc, ele : acc + ele, [u.soldiers for u in self.units], [])
     
-            
+    def update(self, dt):
+        for u in self.units: u.update(dt)
+
             
 class InfantryUnit:
     
@@ -90,7 +92,6 @@ class InfantryUnit:
         self._is_selected = a
     is_selected = property(_get_is_selected, _set_is_selected, lambda x : x)       
 
-
     
     def __init__(self, space, pos, rot, col):
         self.width, self.height = self.start_width, self.start_height
@@ -102,6 +103,8 @@ class InfantryUnit:
             inf.unit = self
             self.soldiers.append(inf)
         
+        self.dest = None
+        self.inter_dest = None
         self._is_selected = False
         self.col = col
         
@@ -122,19 +125,12 @@ class InfantryUnit:
         if (unit_pos-pos).get_length_sqrd() > 10 and  (np.pi - (unit_pos-pos).angle) > np.pi/10:
             self.rot = np.pi/2 + (unit_pos-pos).angle
         
-        import matplotlib.pyplot as plt
         # Rotation of the formation
         M = M - pos
-        plt.scatter(*M.T)
         r = R.from_euler('z', self.rot)
         MR = r.apply(np.hstack((M,np.zeros((len(M),1)))))
         MR = MR[:,:-1]
         new_form = MR + pos
-        plt.scatter(*MR.T)
-        plt.title(self.rot*180/np.pi)
-        plt.show()
-        
-        
         
         pd = pairwise_distances(self.soldiers_pos(), new_form)
         row_ind, col_ind = linear_sum_assignment(pd) # Find min cost assignment to final positions
@@ -142,12 +138,43 @@ class InfantryUnit:
         for i in range(len(row_ind)):
             self.soldiers[row_ind[i]].dest = Vec2d(new_form[col_ind[i]].tolist())
     
-    
     def soldiers_pos(self, numpy = True): 
         return [np.array(a.body.position) if numpy else a.body.position for a in self.soldiers]    
     
     def attack(self, enemy_unit):
         pass
+    
+    def update(self, dt):
+        
+        # TODO : Formation correction speed
+        
+        if not self.dest is None:
+            
+            unit_pos = Vec2d((0,0))
+            for s in self.soldiers: unit_pos += s.body.position / len(self.soldiers)            
+            
+            if (unit_pos-Vec2d(self.dest)).get_length_sqrd() > 3 and\
+                np.pi/2 + (unit_pos-Vec2d(self.dest)).angle > np.pi / 15:
+                self.inter_dest = unit_pos + Vec2d(self.dest).normalized() * 
+                self.move_at_pos(self.inter_dest)
+                print(self.dest, unit_pos, self.inter_dest)
+            else:
+                
+                if self.inter_dest is None:
+                    self.move_at_pos(self.dest)
+                else:
+                    if (self.inter_dest - unit_pos).get_length_sqrd() < 10:
+                        self.inter_dest = None
+        
+            if (self.dest - unit_pos).get_length_sqrd() < 10:
+                self.dest = None        
+        
+        
+        for s in self.soldiers: s.update(dt)
+        
+        
+        
+        
         
 
 
@@ -156,11 +183,12 @@ class Infantry:
     size = 20
     mass = 1
     dist = size / 4
-    speed = 90
+    base_speed = 90
 
     def __init__(self, space, pos, rot, col):
         
         self.health = 100
+        self.speed = self.base_speed
 
         body = add_box(space, Infantry.size, Infantry.mass, pos, rot, col)
         body.soldier = self
@@ -193,7 +221,6 @@ class Infantry:
             else:
                 dv = Vec2d(self.speed, 0.0)
                 self.body.velocity = self.body.rotation_vector.cpvrotate(dv)            
-
 
         # TODO : correction while marching
 
