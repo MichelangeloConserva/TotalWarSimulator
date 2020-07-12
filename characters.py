@@ -145,19 +145,21 @@ class InfantryUnit:
         pass
     
     def update(self, dt):
-        
-        # TODO : Formation correction speed
+        th_dist = max_dist = None
         
         if not self.dest is None:
             
             unit_pos = Vec2d((0,0))
-            for s in self.soldiers: unit_pos += s.body.position / len(self.soldiers)            
+            dds = []
+            for s in self.soldiers: 
+                unit_pos += s.body.position / len(self.soldiers)        
+                dds.append((Vec2d(self.dest) - s.body.position).get_length_sqrd())
+                
             
-            if (unit_pos-Vec2d(self.dest)).get_length_sqrd() > 3 and\
+            if (unit_pos-Vec2d(self.dest)).get_length_sqrd() > 2 or\
                 np.pi/2 + (unit_pos-Vec2d(self.dest)).angle > np.pi / 15:
-                self.inter_dest = unit_pos + Vec2d(self.dest).normalized() * 
+                self.inter_dest = unit_pos*0.9 + Vec2d(self.dest)*0.1
                 self.move_at_pos(self.inter_dest)
-                print(self.dest, unit_pos, self.inter_dest)
             else:
                 
                 if self.inter_dest is None:
@@ -168,9 +170,10 @@ class InfantryUnit:
         
             if (self.dest - unit_pos).get_length_sqrd() < 10:
                 self.dest = None        
+                
+            th_dist = np.mean(dds) + 2*np.std(dds); max_dist = max(dds)
         
-        
-        for s in self.soldiers: s.update(dt)
+        for s in self.soldiers: s.update(dt, th_dist, max_dist)
         
         
         
@@ -184,6 +187,7 @@ class Infantry:
     mass = 1
     dist = size / 4
     base_speed = 90
+    max_speed = 220
 
     def __init__(self, space, pos, rot, col):
         
@@ -206,23 +210,37 @@ class Infantry:
         gear.max_force = 5000  # emulate angular friction 
 
         self.body = body
-        self.dest = None
+        self.dest = pos
     
     
-    def update(self, dt):
+    def update(self, dt, th_dist, max_dist):
         
-        if not self.dest is None:
+        dd = (Vec2d(self.dest) - self.body.position).get_length_sqrd()
+        
+        if dd > 1:
+            
+            
+            if not th_dist is None and dd > th_dist:
+                self.speed = self.base_speed + (self.max_speed-self.speed) * (dd/max_dist)
+            elif dd < 5:
+                self.speed = 1
+            else:
+                self.speed = self.base_speed
+            
             self.body.angle = (self.dest - self.body.position).angle
         
             if (self.dest - self.body.position).get_length_sqrd() < 1:
                 self.body.velocity = 0,0
-                self.dest = None
 
             else:
                 dv = Vec2d(self.speed, 0.0)
                 self.body.velocity = self.body.rotation_vector.cpvrotate(dv)            
 
-        # TODO : correction while marching
+
+            
+            
+            
+            
 
 
 
@@ -234,6 +252,32 @@ if __name__ == '__main__':
     
     space = create_space(WIDTH, HEIGHT)
     attacker = Army(space, (WIDTH/2, HEIGHT/6), WIDTH, HEIGHT)
+
+
+
+
+
+
+ss = 90
+max_ss = 120
+
+
+
+ss + (max_ss - ss) * 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
