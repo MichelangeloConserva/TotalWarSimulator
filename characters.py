@@ -68,9 +68,9 @@ class Army:
             
 class InfantryUnit:
     
-    max_n = 30
+    max_n = 50
     start_width = 10
-    start_height = 3
+    start_height = 5
     
     @property
     def corners(self):
@@ -138,10 +138,17 @@ class InfantryUnit:
         for i in range(len(row_ind)):
             self.soldiers[row_ind[i]].dest = Vec2d(new_form[col_ind[i]].tolist())
     
+    def formation_change_at_pos(self):
+        
+        print("formations")
+        
+    
+    
     def soldiers_pos(self, numpy = True): 
         return [np.array(a.body.position) if numpy else a.body.position for a in self.soldiers]    
     
     def attack(self, enemy_unit):
+        # TODO : add attack function
         pass
     
     def update(self, dt):
@@ -183,7 +190,7 @@ class InfantryUnit:
 
 class Infantry:
 
-    size = 20
+    size = 10
     mass = 1
     dist = size / 4
     base_speed = 90
