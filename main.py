@@ -141,7 +141,7 @@ while True:
 
 # Saving the result
 import imageio
-imageio.mimwrite('output_filename.gif', video , fps = 60.)
+imageio.mimwrite('test.gif', video , fps = 60.)
 
 
 
