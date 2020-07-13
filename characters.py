@@ -79,8 +79,6 @@ def ghost_units_with_formation(selected_units, start_pos, end_pos, screen, send_
         
         prs = np.linspace(0,1, len(selected_units)+1).tolist()
         
-        # TODO : order the selected units according to the distance to the pos only when send_command
-        
         if send_command:
 
             units = list(selected_units)
@@ -321,7 +319,7 @@ class InfantryUnit:
 
 class Infantry:
 
-    size = 10
+    size = 5
     mass = 1
     dist = size / 4
     base_speed = 90

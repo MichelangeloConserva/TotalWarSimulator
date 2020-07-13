@@ -20,7 +20,7 @@ from characters import Army
 from utils import create_space, is_in_selection, is_on_enemy_unity
 from characters import move_units_with_formation, ghost_units_with_formation
 
-WIDTH, HEIGHT = 800, 800
+WIDTH, HEIGHT = 500, 350
 UNIT_SIZE = 10
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
