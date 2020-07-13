@@ -3,12 +3,15 @@ import pygame
 import numpy as np
 
 from pymunk.vec2d import Vec2d
+from pymunk.pygame_util import from_pygame, to_pygame
 from scipy.optimize import linear_sum_assignment
 from sklearn.metrics import pairwise_distances
 from functools import reduce
 from scipy.spatial.transform import Rotation as R
 
 RED = (255, 0, 0)
+GHOST_RED = (255, 0, 0, 100)
+GREEN = (0, 255, 0)
 
 def add_box(space, size, mass, pos, rot, col):
     body = pymunk.Body()
@@ -38,8 +41,103 @@ def get_formation(pos, width, height, size, dist):
         for j in range(height): formation.append((ww[i], hh[j]))
     return formation
     
-def get_size(width, dist, size):
-    return width * size + (width-1) * dist     
+def get_size(width, dist, size): return width * size + (width-1) * dist     
+
+def move_units_with_formation(selected_units, start_pos, end_pos, screen):
+    start_pos = Vec2d(start_pos)
+    end_pos = Vec2d(end_pos)
+    
+    if len(selected_units) != 0:
+        
+        for i,u in enumerate(selected_units):
+            pr = (i+1) / len(selected_units)
+            cur_start = start_pos * (pr) + end_pos * (1-pr)
+            cur_end   = start_pos * (1 - pr) + end_pos * (pr)
+
+            (cur_start-cur_end)
+            
+def ghost_units_with_formation(selected_units, start_pos, end_pos, screen, send_command = False):
+    start_pos = Vec2d(start_pos)
+    end_pos = Vec2d(end_pos)
+    
+    if len(selected_units) != 0:
+        
+        diff_vect_all = start_pos-end_pos
+        
+        # diff_vect_all clipping
+        
+        max_row_length = min_row_length = 0
+        for u in selected_units:
+            u_size, u_dist = u.soldier_size_dist
+            max_row_length += u_size * u.n//2 + u_dist * (u.n//2 - 1)
+            min_row_length += u_size * 5 + u_dist * (5 - 1)
+        if diff_vect_all.length > max_row_length:
+            diff_vect_all = diff_vect_all.normalized() * max_row_length
+        elif diff_vect_all.length < min_row_length:
+            diff_vect_all = diff_vect_all.normalized() * min_row_length
+                
+        
+        prs = np.linspace(0,1, len(selected_units)+1).tolist()
+        
+        for i,u in enumerate(selected_units):
+            
+            if send_command: formation = []
+            
+            u_size, u_dist = u.soldier_size_dist
+            
+            pr_start = prs[i]
+            pr_end = prs[i+1]
+            
+            cur_start = start_pos*(pr_start) + (start_pos - diff_vect_all)*(1-pr_start)
+            cur_end = start_pos*(pr_end) + (start_pos - diff_vect_all)*(1-pr_end)
+            diff_vect = cur_start-cur_end
+            
+            perp_vect = (diff_vect).perpendicular_normal()
+            # diff_vect clipping
+            max_row_length = u_size * u.n//2 + u_dist * (u.n//2 - 1)
+            min_row_length = u_size * 5 + u_dist * (5 - 1)
+            if diff_vect.length > max_row_length:
+                diff_vect = diff_vect.normalized() * max_row_length
+            elif diff_vect.length < min_row_length:
+                diff_vect = diff_vect.normalized() * min_row_length
+            
+            # units per row
+            upr = np.minimum(int((diff_vect).length / (u_size + u_dist)),u.n//2)
+
+            alphas = np.linspace(0,1, upr).tolist()
+            alphas = alphas[:-1]
+            
+            if len(alphas) > 0:
+                n_rows_with_additional = u.n - len(alphas)*(u.n // len(alphas))
+            
+            for a in alphas:
+                for r in range(u.n // len(alphas)):
+                    pos = Vec2d((cur_start*(a) + (cur_start - diff_vect)*(1-a) +\
+                                 perp_vect * (r * (u_size + u_dist)) ).int_tuple)
+                    pygame.draw.circle(screen, GHOST_RED, pos , u_size//2)
+                    
+                    if send_command: formation.append(to_pygame(pos, screen))
+                    
+                if n_rows_with_additional > 0:
+                    pos = Vec2d((cur_start*(a) + (cur_start - diff_vect)*(1-a) +\
+                                 perp_vect * ((r+1) * (u_size + u_dist)) ).int_tuple)
+                    pygame.draw.circle(screen, GHOST_RED, pos , u_size//2)
+                    n_rows_with_additional -= 1
+                
+                    if send_command: formation.append(to_pygame(pos, screen))
+                    
+            if send_command:  
+                assert len(formation) == u.n
+                u.move_at_pos(None, formation)        
+            pygame.draw.circle(screen, GREEN, cur_start.int_tuple , 2)
+            pygame.draw.circle(screen, GREEN, cur_end.int_tuple, 2)
+                            
+                
+            
+            
+
+
+
 
 class Army:
     
@@ -72,6 +170,10 @@ class InfantryUnit:
     start_width = 10
     start_height = 5
     
+    @property
+    def n(self): return len(self.soldiers)
+    @property
+    def soldier_size_dist(self): return Infantry.size, Infantry.dist
     @property
     def corners(self):
         min_x = min_y = np.inf; max_y = max_x = 0
@@ -107,42 +209,44 @@ class InfantryUnit:
         self.inter_dest = None
         self._is_selected = False
         self.col = col
-        
         self.rot = rot
+        self.ghost = []
+        
     
     def get_formation(self, pos):
         return get_formation(pos, self.width, self.height, Infantry.size, Infantry.dist)
     
-    def move_at_pos(self, pos):
-        new_form = self.get_formation(pos)    
+    def move_at_pos(self, pos, new_form = None):
+        if new_form is None: 
+            new_form = self.get_formation(pos)    
+            pos = Vec2d(pos)
+            
+            unit_pos = Vec2d((0,0))
+            for s in self.soldiers: unit_pos += s.body.position / len(self.soldiers)
+    
+            M = np.array(new_form) 
+            
+            if (unit_pos-pos).get_length_sqrd() > 10 and  (np.pi - (unit_pos-pos).angle) > np.pi/10:
+                self.rot = np.pi/2 + (unit_pos-pos).angle
+            
+            # Rotation of the formation
+            M = M - pos
+            r = R.from_euler('z', self.rot)
+            MR = r.apply(np.hstack((M,np.zeros((len(M),1)))))
+            MR = MR[:,:-1]
+            new_form = MR + pos
+        else:
+            self.dest = None
         
-        pos = Vec2d(pos)
-        unit_pos = Vec2d((0,0))
-        for s in self.soldiers: unit_pos += s.body.position / len(self.soldiers)
-
-        M = np.array(new_form) 
-        
-        if (unit_pos-pos).get_length_sqrd() > 10 and  (np.pi - (unit_pos-pos).angle) > np.pi/10:
-            self.rot = np.pi/2 + (unit_pos-pos).angle
-        
-        # Rotation of the formation
-        M = M - pos
-        r = R.from_euler('z', self.rot)
-        MR = r.apply(np.hstack((M,np.zeros((len(M),1)))))
-        MR = MR[:,:-1]
-        new_form = MR + pos
         
         pd = pairwise_distances(self.soldiers_pos(), new_form)
         row_ind, col_ind = linear_sum_assignment(pd) # Find min cost assignment to final positions
         
         for i in range(len(row_ind)):
-            self.soldiers[row_ind[i]].dest = Vec2d(new_form[col_ind[i]].tolist())
-    
-    def formation_change_at_pos(self):
-        
-        print("formations")
-        
-    
+            try:
+                self.soldiers[row_ind[i]].dest = Vec2d(new_form[col_ind[i]].tolist())
+            except:
+                self.soldiers[row_ind[i]].dest = Vec2d(new_form[col_ind[i]])
     
     def soldiers_pos(self, numpy = True): 
         return [np.array(a.body.position) if numpy else a.body.position for a in self.soldiers]    
@@ -183,7 +287,10 @@ class InfantryUnit:
         for s in self.soldiers: s.update(dt, th_dist, max_dist)
         
         
-        
+        if len(self.ghost) != 0:
+            for pos in self.ghost: 
+                pygame.draw.circl(self.army.screen, GHOST_RED, pos, Infantry.size/2)
+            
         
         
 

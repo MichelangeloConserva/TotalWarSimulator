@@ -16,6 +16,7 @@ from time import time
 
 from characters import Army
 from utils import create_space, is_in_selection, is_on_enemy_unity
+from characters import move_units_with_formation, ghost_units_with_formation
 
 WIDTH, HEIGHT = 800, 800
 UNIT_SIZE = 10
@@ -32,30 +33,34 @@ def update(space, dt, surface):
     
 space = create_space(WIDTH, HEIGHT)
 
-attacker = Army(space, (WIDTH/2, HEIGHT/6), WIDTH, HEIGHT)
-defender = Army(space, (WIDTH/2, 5*HEIGHT/6), WIDTH, HEIGHT, units = (1,0,0), role = "Defender")
-
-attacker.enemy = defender
-defender.enemy = attacker
-
-
 pygame.init()
 screen = pygame.display.set_mode((WIDTH,HEIGHT)) 
 clock = pygame.time.Clock()
 draw_options = pymunk.pygame_util.DrawOptions(screen)
 
 
-drag = False
+
+attacker = Army(space, (WIDTH/2, HEIGHT/6), WIDTH, HEIGHT, units = (5,0,0))
+defender = Army(space, (WIDTH/2, 5*HEIGHT/6), WIDTH, HEIGHT, units = (1,0,0), role = "Defender")
+
+attacker.enemy = defender
+defender.enemy = attacker
+
+attacker.screen = screen
+defender.screen = screen
+
+
+
+drag = drag_rmb = False
 start_pos_lmb = 0,0
 selected_units = set()
 while True:
-    
+    screen.fill(pygame.color.THECOLORS["white"])
     
     for event in pygame.event.get():
         if event.type == QUIT or \
             event.type == KEYDOWN and (event.key in [K_ESCAPE, K_q]): 
             pygame.quit()
-    
     
         elif event.type == MOUSEBUTTONDOWN:
             
@@ -70,7 +75,6 @@ while True:
                 if not enemy_unit is None:
                     for u in selected_units: u.attack(enemy_unit)
                 else:
-                    start_pos_rmb = from_pygame(event.pos, screen)
                     drag_rmb = True
                     
                 
@@ -98,16 +102,20 @@ while True:
                 if sum((np.array(start_pos_rmb)-np.array(end_pos_rmb))**2) < 30**2:
                     for u in selected_units: u.dest = start_pos_rmb
                 else:
-                    
-                    # TODO : implement right drag to draw formation
-                    print(start_pos_rmb, end_pos_rmb, sum((np.array(start_pos_lmb)-np.array(end_pos_rmb))**2))
+                    ghost_units_with_formation(selected_units, 
+                                               to_pygame(start_pos_rmb, screen), 
+                                               pygame.mouse.get_pos(), screen, 
+                                               send_command = True)
                 drag_rmb = False
 
 
-
-
+    if drag_rmb:
+        ghost_units_with_formation(selected_units, to_pygame(start_pos_rmb, screen), pygame.mouse.get_pos(), screen)
     
-    screen.fill(pygame.color.THECOLORS["white"])
+    
+    
+    
+    
     space.debug_draw(draw_options)
     fps = 60.0
     update(space, 1/fps, screen)
