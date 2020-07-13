@@ -79,6 +79,26 @@ def ghost_units_with_formation(selected_units, start_pos, end_pos, screen, send_
         
         prs = np.linspace(0,1, len(selected_units)+1).tolist()
         
+        # TODO : order the selected units according to the distance to the pos only when send_command
+        
+        if send_command:
+
+            units = list(selected_units)
+            selected_units = units.copy()
+            
+            divs = np.linspace(0,1, len(units)+2).tolist()[1:-1]
+            divs = np.array([np.array((start_pos * div + end_pos * (1 - div)).int_tuple) for div in divs])
+            
+            units_pos = np.array([np.array(u.pos.int_tuple) for u in units])
+
+            pd = pairwise_distances(units_pos, divs)
+            row_ind, col_ind = linear_sum_assignment(pd) # Find min cost assignment to final positions        
+            
+            for ri,ci in zip(row_ind,col_ind):
+                selected_units[ci] = units[ri]
+            
+        
+        
         for i,u in enumerate(selected_units):
             
             if send_command: formation = []
@@ -171,6 +191,11 @@ class InfantryUnit:
     start_height = 5
     
     @property
+    def pos(self): 
+        unit_pos = Vec2d((0,0))
+        for s in self.soldiers: unit_pos += s.body.position / len(self.soldiers)        
+        return unit_pos
+    @property
     def n(self): return len(self.soldiers)
     @property
     def soldier_size_dist(self): return Infantry.size, Infantry.dist
@@ -221,8 +246,7 @@ class InfantryUnit:
             new_form = self.get_formation(pos)    
             pos = Vec2d(pos)
             
-            unit_pos = Vec2d((0,0))
-            for s in self.soldiers: unit_pos += s.body.position / len(self.soldiers)
+            unit_pos = self.pos
     
             M = np.array(new_form) 
             

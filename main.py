@@ -13,6 +13,8 @@ from pymunk.vec2d import Vec2d
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_q, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from pymunk.pygame_util import from_pygame, to_pygame
 from time import time
+from io import BytesIO
+from PIL import Image
 
 from characters import Army
 from utils import create_space, is_in_selection, is_on_enemy_unity
@@ -21,6 +23,7 @@ from characters import move_units_with_formation, ghost_units_with_formation
 WIDTH, HEIGHT = 800, 800
 UNIT_SIZE = 10
 RED = (255, 0, 0)
+GREEN = (0, 255, 0)
 LEFT = 1
 RIGHT = 3
     
@@ -35,6 +38,8 @@ space = create_space(WIDTH, HEIGHT)
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH,HEIGHT)) 
+
+
 clock = pygame.time.Clock()
 draw_options = pymunk.pygame_util.DrawOptions(screen)
 
@@ -50,8 +55,9 @@ attacker.screen = screen
 defender.screen = screen
 
 
-
-drag = drag_rmb = False
+video = []
+k = 0
+drag_lmb = drag_rmb = False
 start_pos_lmb = 0,0
 selected_units = set()
 while True:
@@ -64,9 +70,9 @@ while True:
     
         elif event.type == MOUSEBUTTONDOWN:
             
-            if event.button == LEFT:
-                start_pos_lmb = from_pygame(event.pos, screen)
-                drag = True
+            if event.button == LEFT and not drag_lmb:
+                start_pos_lmb = event.pos
+                drag_lmb = True
             
             elif event.button == RIGHT:
                 start_pos_rmb = from_pygame(event.pos, screen)
@@ -80,17 +86,17 @@ while True:
                 
         elif event.type == MOUSEBUTTONUP:
             
-            if drag:
+            if drag_lmb:
                 end_pos = from_pygame(event.pos, screen)
                 
                 selection = False
                 for u in attacker.units:
                     for s in u.soldiers:
-                        if is_in_selection(list(s.body.position), start_pos_lmb, end_pos): 
+                        if is_in_selection(list(s.body.position), from_pygame(start_pos_lmb, screen), end_pos): 
                             u.is_selected = selection = True
                             selected_units.add(u)
                             break
-                drag = False
+                drag_lmb = False
                 
                 if not selection:
                     for u in attacker.units: u.is_selected = False
@@ -112,9 +118,12 @@ while True:
     if drag_rmb:
         ghost_units_with_formation(selected_units, to_pygame(start_pos_rmb, screen), pygame.mouse.get_pos(), screen)
     
-    
-    
-    
+    if drag_lmb:
+        mp = pygame.mouse.get_pos()
+        if sum((np.array(start_pos_lmb)-np.array(mp))**2) > 30**2:
+            point_list = [start_pos_lmb, (start_pos_lmb[0], mp[1]), mp, (mp[0], start_pos_lmb[1])]
+            pygame.draw.polygon(screen, RED,  point_list, 3)
+        
     
     space.debug_draw(draw_options)
     fps = 60.0
@@ -123,26 +132,16 @@ while True:
     
     clock.tick(fps)
     
-    
+    # pygame.image.save(screen, f"imgs/{k}.png")
+    # k += 1
+    video.append(pygame.surfarray.array3d(screen).swapaxes(1, 0).astype(np.uint8))
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Saving the result
+import imageio
+imageio.mimwrite('output_filename.gif', video , fps = 60.)
 
 
 
