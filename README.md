@@ -15,6 +15,7 @@ State of the project:
 - [ ] Attack between units
 - [ ] Archers
 - [ ] Cavalry
+- [ ] Refactor and add comments
 
 (The violet colour means that the soldier is subject to physics)
 
