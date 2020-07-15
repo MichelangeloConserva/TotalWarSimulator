@@ -56,99 +56,7 @@ def move_units_with_formation(selected_units, start_pos, end_pos, screen):
 
             (cur_start-cur_end)
             
-def ghost_units_with_formation(selected_units, start_pos, end_pos, screen, send_command = False):
-    start_pos = Vec2d(start_pos)
-    end_pos = Vec2d(end_pos)
-    
-    if len(selected_units) != 0:
-        
-        diff_vect_all = start_pos-end_pos
-        
-        # diff_vect_all clipping
-        
-        max_row_length = min_row_length = 0
-        for u in selected_units:
-            u_size, u_dist = u.soldier_size_dist
-            max_row_length += u_size * u.n//2 + u_dist * (u.n//2 - 1)
-            min_row_length += u_size * 5 + u_dist * (5 - 1)
-        if diff_vect_all.length > max_row_length:
-            diff_vect_all = diff_vect_all.normalized() * max_row_length
-        elif diff_vect_all.length < min_row_length:
-            diff_vect_all = diff_vect_all.normalized() * min_row_length
-                
-        
-        prs = np.linspace(0,1, len(selected_units)+1).tolist()
-        
-        if send_command:
 
-            units = list(selected_units)
-            selected_units = units.copy()
-            
-            divs = np.linspace(0,1, len(units)+2).tolist()[1:-1]
-            divs = np.array([np.array((start_pos * div + end_pos * (1 - div)).int_tuple) for div in divs])
-            
-            units_pos = np.array([np.array(u.pos.int_tuple) for u in units])
-
-            pd = pairwise_distances(units_pos, divs)
-            row_ind, col_ind = linear_sum_assignment(pd) # Find min cost assignment to final positions        
-            
-            for ri,ci in zip(row_ind,col_ind):
-                selected_units[ci] = units[ri]
-            
-        
-        
-        for i,u in enumerate(selected_units):
-            
-            if send_command: formation = []
-            
-            u_size, u_dist = u.soldier_size_dist
-            
-            pr_start = prs[i]
-            pr_end = prs[i+1]
-            
-            cur_start = start_pos*(pr_start) + (start_pos - diff_vect_all)*(1-pr_start)
-            cur_end = start_pos*(pr_end) + (start_pos - diff_vect_all)*(1-pr_end)
-            diff_vect = cur_start-cur_end
-            
-            perp_vect = (diff_vect).perpendicular_normal()
-            # diff_vect clipping
-            max_row_length = u_size * u.n//2 + u_dist * (u.n//2 - 1)
-            min_row_length = u_size * 5 + u_dist * (5 - 1)
-            if diff_vect.length > max_row_length:
-                diff_vect = diff_vect.normalized() * max_row_length
-            elif diff_vect.length < min_row_length:
-                diff_vect = diff_vect.normalized() * min_row_length
-            
-            # units per row
-            upr = np.minimum(int((diff_vect).length / (u_size + u_dist)),u.n//2)
-
-            alphas = np.linspace(0,1, upr).tolist()
-            alphas = alphas[:-1]
-            
-            if len(alphas) > 0:
-                n_rows_with_additional = u.n - len(alphas)*(u.n // len(alphas))
-            
-            for a in alphas:
-                for r in range(u.n // len(alphas)):
-                    pos = Vec2d((cur_start*(a) + (cur_start - diff_vect)*(1-a) +\
-                                 perp_vect * (r * (u_size + u_dist)) ).int_tuple)
-                    pygame.draw.circle(screen, GHOST_RED, pos , u_size//2)
-                    
-                    if send_command: formation.append(to_pygame(pos, screen))
-                    
-                if n_rows_with_additional > 0:
-                    pos = Vec2d((cur_start*(a) + (cur_start - diff_vect)*(1-a) +\
-                                 perp_vect * ((r+1) * (u_size + u_dist)) ).int_tuple)
-                    pygame.draw.circle(screen, GHOST_RED, pos , u_size//2)
-                    n_rows_with_additional -= 1
-                
-                    if send_command: formation.append(to_pygame(pos, screen))
-                    
-            if send_command:  
-                assert len(formation) == u.n
-                u.move_at_pos(None, formation)        
-            pygame.draw.circle(screen, GREEN, cur_start.int_tuple , 2)
-            pygame.draw.circle(screen, GREEN, cur_end.int_tuple, 2)
                             
                 
             
@@ -188,6 +96,8 @@ class InfantryUnit:
     start_width = 10
     start_height = 5
     
+    @property
+    def width_size(self): return self.width * (Infantry.size + Infantry.dist) - Infantry.dist
     @property
     def pos(self): 
         unit_pos = Vec2d((0,0))
