@@ -1,5 +1,7 @@
 # TotalWarSimulator
 
+[Full version with individual soldiers in the units]
+
 This repository contains the code for a flexible and fast simulator that resembles the battles of the [Total War games series](https://www.totalwar.com/).
 The main goal of building this simulator is to allow to test Multi-Agent control algorithms in a challenging domain.
 
