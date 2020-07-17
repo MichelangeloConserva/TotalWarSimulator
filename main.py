@@ -1,7 +1,3 @@
-"""
-https://github.com/viblo/pymunk/blob/master/examples/tank.py
-"""
-
 import random
 import numpy as np
 import imageio
@@ -19,14 +15,17 @@ from PIL import Image
 from sklearn.metrics import pairwise_distances
 from scipy.optimize import linear_sum_assignment
 
-from characters import Army
-from utils import create_space, is_in_selection, is_on_enemy_unity
+# from characters import Army
+from utils import create_space, is_on_enemy_unity
+from characters import InfantryUnit, Army
 
-WIDTH, HEIGHT = 800, 600
+
+WIDTH, HEIGHT = 500, 300
 UNIT_SIZE = 10
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 GHOST_RED = (255, 0, 0, 100)
+DARKGREEN = pygame.color.THECOLORS["darkgreen"]
 LEFT = 1
 RIGHT = 3
 
@@ -36,6 +35,7 @@ def vector_clipping(v, min_length, max_length):
     elif v.length < min_length:
         return v.normalized() * min_length        
     return v
+
 
 def vect_linspace(v1, v2, n):
     prs = np.linspace(0,1, n+1).tolist()            
@@ -53,64 +53,53 @@ def vect_middles_of_linspace(v1,v2,n):
     return np.array([(v1 * div + v2 * (1 - div)).int_tuple for div in divs])
 
 
-def get_formation_from_front_line(v1, front_line, u, screen, send_command):
-
-    formation = []
-    perp = front_line.perpendicular_normal()
-    u_size, u_dist = u.soldier_size_dist
-    upr = np.minimum(int((front_line).length / (u_size + u_dist)),u.n//2)
-    alphas = np.linspace(0,1, upr).tolist()[:-1]
-    
-    if len(alphas) > 0:
-        n_rows_with_additional = u.n - len(alphas)*(u.n // len(alphas))
-
-        if send_command:        
-            u.width = len(alphas)
-            u.height = u.n // len(alphas) + (1 if n_rows_with_additional != 0 else 0)
-        
-        
-    for a in alphas:
-        for r in range(u.n // len(alphas)):
-            pos = Vec2d((v1*(a) + (v1 - front_line)*(1-a) +\
-                         perp * (r * (u_size + u_dist)) ).int_tuple)
-                
-            # TODO : this draw should not be here
-            pygame.draw.circle(screen, GHOST_RED, pos , u_size//2)
-            
-            if send_command: formation.append(to_pygame(pos, screen))
-            
-        if n_rows_with_additional > 0:
-            pos = Vec2d((v1*(a) + (v1 - front_line)*(1-a) +\
-                         perp * ((r+1) * (u_size + u_dist)) ).int_tuple)
-            pygame.draw.circle(screen, GHOST_RED, pos , u_size//2)
-            n_rows_with_additional -= 1
-        
-            if send_command: formation.append(to_pygame(pos, screen))
-
-
-
-    if send_command: return formation
-
+def get_BB(v1, v2):
+    v1,v2 = Vec2d(v1), Vec2d(v2)
+    left = min(v1.x, v2.x) #+ abs(v1.x - v2.x) / 2
+    bot  = min(v1.y, v2.y) #- abs(v1.y - v2.y) / 2
+    right = max(v1.x, v2.x) #+ abs(v1.x - v2.x) / 2
+    top  = max(v1.y, v2.y) #- abs(v1.y - v2.y) / 2
+    return pymunk.BB(left, bot, right, top)
 
 
 class Game:
     
     def __init__(self, u_att = (2,0,0), u_def = (1,0,0), record = True):
 
+        self.objects = []
         self.video = []
         self.fps = 60.0 
         self.done = False
         self.record = record
     
         pygame.init()
+        
+        InfantryUnit.font = pygame.font.Font(pygame.font.get_default_font(), 8)
+        
+        
         self.screen = pygame.display.set_mode((WIDTH,HEIGHT)) 
         self.space = create_space(WIDTH, HEIGHT)
         
+        self.space.add_collision_handler(2, 1).pre_solve = self.enemy_coll
+        self.space.add_collision_handler(1, 1).pre_solve = self.allied_coll
+        self.space.add_collision_handler(2, 2).pre_solve = self.allied_coll
+        
         self.clock = pygame.time.Clock()
-        self.draw_options = pymunk.pygame_util.DrawOptions(self.screen)
+        # self.draw_options = pymunk.pygame_util.DrawOptions(self.screen)
         
         self.initiate_armies(u_att, u_def)
+    
+    def enemy_coll(self, arbiter, space, _):
+        att_unit, def_unit = arbiter.shapes
         
+        att_unit.body.unit.fighting_against.add(def_unit.body.unit)
+        def_unit.body.unit.fighting_against.add(att_unit.body.unit)        
+        
+        return True
+        
+    def allied_coll(self, arbiter, space, _): return False
+    
+    
     
     def update(self, dt):
         self.space.step(dt)
@@ -119,12 +108,11 @@ class Game:
     
     
     def initiate_armies(self, u_att, u_def):
-        self.attacker = Army(self.space, (WIDTH/2, HEIGHT/6), WIDTH, HEIGHT, 
-                             units = u_att)
-        self.defender = Army(self.space, (WIDTH/2, 5*HEIGHT/6), WIDTH, HEIGHT, 
-                             units = u_def, role = "Defender")
+        self.attacker = Army(self, (WIDTH/2, HEIGHT/6), WIDTH, HEIGHT, 
+                              units = u_att)
+        self.defender = Army(self, (WIDTH/2, 5*HEIGHT/6), WIDTH, HEIGHT, 
+                              units = u_def, role = "Defender")
         self.attacker.enemy, self.defender.enemy = self.defender, self.attacker
-        self.attacker.screen = self.defender.screen = self.screen
         
         
     def on_mouse_down(self, event):
@@ -136,11 +124,12 @@ class Game:
         elif event.button == RIGHT:
             self.start_pos_rmb = from_pygame(event.pos, self.screen)
             
-            enemy_unit = is_on_enemy_unity(self.start_pos_rmb, self.attacker)
-            if not enemy_unit is None:
-                for u in self.selected_units: u.attack(enemy_unit)
-            else:
-                self.drag_rmb = True    
+            for u in self.defender.units:
+                if u.shape.bb.contains_vect(Vec2d(self.start_pos_rmb)):
+                    for au in self.selected_units: 
+                        au.set_dest(u.body.position, (u.body.position - au.body.position).angle)
+                        return
+            self.drag_rmb = True    
                 
                 
     def on_mouse_up(self, event):
@@ -153,20 +142,27 @@ class Game:
                 # Selecting units that are inside the rectangle selection
                 
                 # self.selected_units = set()   We might want to empty this
+                bb = selection_BB = get_BB(from_pygame(self.start_pos_lmb, self.screen), 
+                                           self.end_pos)
+                
+                pos = bb.left, bb.top
+                w = bb.right - bb.left
+                h = bb.top - bb.bottom
+                p = to_pygame(pos, self.screen)
+                pygame.draw.rect(self.screen, DARKGREEN, (*p, w, h), 5)                    
+                
                 selection = False
                 for u in self.attacker.units:
-                    for s in u.soldiers:
-                        start_pos = from_pygame(self.start_pos_lmb, self.screen)
-                        pos = list(s.body.position)
-                        if is_in_selection(pos, start_pos, self.end_pos): 
-                            u.is_selected = selection = True
-                            self.selected_units.add(u)
-                            break
+                    if u.shape.bb.intersects(selection_BB):
+                        u.is_selected = True
+                        self.selected_units.add(u)
+                        selection = True
                 self.drag_lmb = False
                 
                 # Deselecting if no units was in the selection rectangle
                 if not selection:
-                    for u in self.attacker.units: u.is_selected = False
+                    for u in self.attacker.units: 
+                        u.is_selected = False
                     self.selected_units = set()                
                 
                 
@@ -182,12 +178,11 @@ class Game:
                 total_w = 0
                 units_pos = Vec2d((0,0))
                 for u in self.selected_units:
-                    total_w += u.width_size + 2*sum(u.soldier_size_dist)
+                    total_w += u.w + u.dist
                     units_pos += u.pos / len(self.selected_units)
             
                 front_line = (end_pos_rmb - units_pos).perpendicular_normal()
                 
-                print(total_w)
                 
                 start_pos = end_pos_rmb + front_line * total_w / 2 
                 end_pos = end_pos_rmb - front_line * total_w / 2 
@@ -222,8 +217,8 @@ class Game:
                 pygame.draw.polygon(self.screen, RED,  point_list, 3)    
         
         # Drawing pymunk objects
-        self.space.debug_draw(self.draw_options)
-    
+        # self.space.debug_draw(self.draw_options)
+        for o in self.objects: o.draw()
     
     
     def move_units_with_formation(self, start_pos, end_pos, send_command = False):
@@ -236,61 +231,51 @@ class Game:
             # diff_vect_all clipping
             max_row_l = min_row_l = 0
             for u in self.selected_units:
-                u_size, u_dist = u.soldier_size_dist
-                max_row_l += u_size * u.n//2 + u_dist * (u.n//2 - 1)
-                min_row_l += u_size * 5 + u_dist * (5 - 1)
+                max_row_l += u.max_w  + u.dist
+                min_row_l += u.min_w  + u.dist
+                
             diff_vect_all = vector_clipping(diff_vect_all, min_row_l, max_row_l)
-            
+            perp = diff_vect_all.perpendicular_normal()
             
             # Find the minimal distance assignment of the unit to the proportions
             # only necessary if we are issueing the command
-            if send_command:
+            
     
-                units = list(selected_units).copy()
-                
-                # Find middle points in the proportions
-                divs = vect_middles_of_linspace(start_pos,end_pos,len(units))
-                
-                units_pos = np.array([np.array(u.pos.int_tuple) for u in units])
-    
-                pd = pairwise_distances(units_pos, divs)
-                row_ind, col_ind = linear_sum_assignment(pd) 
-                print(pd, row_ind, col_ind)
-                
-                # Reordering in order to minimize the assignment cost
-                for ri,ci in zip(row_ind,col_ind): selected_units[ci] = units[ri]
-                
-                
-            # Calculate formations position
-            start_ends = vect_linspace(start_pos, start_pos - diff_vect_all, len(self.selected_units))
-            for (cur_start, cur_end),u in zip(start_ends, selected_units):
-                
-                # diff_vect clipping
-                diff_vect = cur_start-cur_end
-                max_row_l = u_size * u.n//2 + u_dist * (u.n//2 - 1)
-                min_row_l = u_size * 5 + u_dist * (5 - 1)
-                diff_vect = vector_clipping(diff_vect, min_row_l, max_row_l)
+            units = list(selected_units)
+            
+            # Find middle points in the proportions
+            divs = vect_middles_of_linspace(start_pos,start_pos - diff_vect_all,len(units))
+            
+            units_pos = np.array([np.array(u.pos.int_tuple) for u in units])
 
-                # Get the formation                 
-                formation = get_formation_from_front_line(cur_start, diff_vect, 
-                                                          u, self.screen, send_command)
-                if send_command:  
-                    assert len(formation) == u.n, str(len(formation))
-                    u.move_at_pos(None, formation)     
+            pd = pairwise_distances(units_pos, divs)
+            row_ind, col_ind = linear_sum_assignment(pd) 
+            
+            if send_command:
+                for ri,ci in zip(row_ind,col_ind): 
+                    units[ri].set_dest(to_pygame(divs[ci].tolist(), self.screen), 
+                                       -perp.angle)
+            
+            start_ends = vect_linspace(start_pos, start_pos - diff_vect_all, len(self.selected_units))
+            for (cur_start, cur_end),u in zip(start_ends, selected_units):        
+                
+                diff = cur_end - cur_start
+                diff = diff.normalized() * (diff.length - u.dist)
+                l = diff.length
+                
+                if l != 0:
+                    w = l
+                    h = u.shape.area / l
+
+                    vs = [cur_start, 
+                          cur_start + diff, 
+                          cur_start + diff - perp*h, 
+                          cur_start - perp*h]
+                    pygame.draw.polygon(self.screen, GHOST_RED, vs)
                     
-                pygame.draw.circle(self.screen, GREEN, cur_start.int_tuple , 2)
-                pygame.draw.circle(self.screen, GREEN, cur_end.int_tuple, 2)    
-        
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+                    if send_command: 
+                        u.w = w; u.h = h
+                        
     
     
     def run(self):
@@ -336,9 +321,3 @@ if __name__ == "__main__":
     
     if False:
         pygame.quit()
-
-    
-    
-    
-
-    
