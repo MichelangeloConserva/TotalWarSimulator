@@ -4,9 +4,11 @@ import math
 import numpy as np
 import math
 
-from pymunk.pygame_util import to_pygame
 from pymunk.vec2d import Vec2d
+from scipy.spatial.transform import Rotation as R
 
+
+from utils import do_polygons_intersect, is_rect_circle_collision
 
 
 RED = (255, 0, 0)
@@ -15,24 +17,6 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 GHOST_RED = (255, 0, 0, 100)
 DARKGREEN = pygame.color.THECOLORS["darkgreen"]
-
-def add_box(space, pos, w, h, rot, col, mass):
-
-    body = pymunk.Body()
-    space.add(body)
-
-    body.position = Vec2d(pos)
-    body.angle = rot
-    
-    shape = pymunk.Poly.create_box(body, (h, w), 0.0)
-    shape.mass = mass
-    shape.friction = 0.7
-    shape.color = col
-    
-    space.add(shape)
-    
-    return body
-
 
 def get_center_points(center, n, size, dist):
     dd = n * size + (n-1)*dist - size
@@ -51,8 +35,22 @@ def get_formation(pos, width, height, size, dist):
 def draw_text(t, screen, font, pos, angle):
     text = font.render(t, True, WHITE)
     text = pygame.transform.rotate(text, angle)
-    text_rect = text.get_rect(center=to_pygame(pos, screen))
+    text_rect = text.get_rect(center = pos)
     screen.blit(text, text_rect)
+
+
+def calc_vertices(pos, h, w, angle):
+    vs = []  
+    vs.append(list(Vec2d( h/2, w/2))+[0])                
+    vs.append(list(Vec2d( h/2,-w/2))+[0])                
+    vs.append(list(Vec2d(-h/2,-w/2))+[0])                
+    vs.append(list(Vec2d(-h/2, w/2))+[0])      
+
+    M = np.array(vs)
+    MR = R.from_euler('z', angle).apply(M)[:,:-1].tolist()
+
+    return [pos + Vec2d(v) for v in MR]
+
 
 
 class Army:
@@ -69,10 +67,8 @@ class Army:
             inf = InfantryUnit(game, (w,center[1]), 
                                np.pi/2 if role == "Attacker" else -np.pi/2,
                                DARKGREEN if role == "Attacker" else (0, 0, 255))
-            inf.shape.collision_type = 2 if role == "Attacker" else 1
+            inf.army = self
             self.infantry.append(inf)
-            
-            
             
         self.game = game
         
@@ -80,39 +76,126 @@ class Army:
         for u in self.units: u.update(dt)
 
 
+
+def do_polygons_intersect(a, b):
+
+    polygons = [a, b];
+    minA, maxA, projected, i, i1, j, minB, maxB = None, None, None, None, None, None, None, None
+
+    for i in range(len(polygons)):
+
+        # for each polygon, look at each edge of the polygon, and determine if it separates
+        # the two shapes
+        polygon = polygons[i];
+        for i1 in range(len(polygon)):
+
+            # grab 2 vertices to create an edge
+            i2 = (i1 + 1) % len(polygon);
+            p1 = polygon[i1];
+            p2 = polygon[i2];
+
+            # find the line perpendicular to this edge
+            normal = { 'x': p2[1] - p1[1], 'y': p1[0] - p2[0] };
+
+            minA, maxA = None, None
+            # for each vertex in the first shape, project it onto the line perpendicular to the edge
+            # and keep track of the min and max of these values
+            for j in range(len(a)):
+                projected = normal['x'] * a[j][0] + normal['y'] * a[j][1];
+                if (minA is None) or (projected < minA): 
+                    minA = projected
+
+                if (maxA is None) or (projected > maxA):
+                    maxA = projected
+
+            # for each vertex in the second shape, project it onto the line perpendicular to the edge
+            # and keep track of the min and max of these values
+            minB, maxB = None, None
+            for j in range(len(b)): 
+                projected = normal['x'] * b[j][0] + normal['y'] * b[j][1]
+                if (minB is None) or (projected < minB):
+                    minB = projected
+
+                if (maxB is None) or (projected > maxB):
+                    maxB = projected
+
+            # if there is no overlap between the projects, the edge we are looking at separates the two
+            # polygons, and we know there is no overlap
+            if (maxA < minB) or (maxB < minA):
+                return False;
+
+    return True
+
+class Body:
+    
+    @property
+    def vertices(self): return calc_vertices(self.pos, self.h, self.w, self.angle)
+    @property
+    def area(self): return self.w * self.h
+    
+    
+    def __init__(self, pos, w, h, angle, col, mass, unit):
+        self.pos = Vec2d(pos)
+        self.w = w
+        self.h = h
+        self.angle = angle
+        self.col = col
+        self.mass = mass
+        self.unit = unit
+    
+    def contains_vect(self, m):
+        
+        a,b,_,c = self.vertices
+        
+        AM_dot_AB = (m-a).dot(b-a)
+        AB_dot_AB = (b-a).dot(b-a)
+        
+        AM_dot_AC = (m-a).dot(c-a)
+        AC_dot_AC = (c-a).dot(c-a)
+        
+        return 0 < AM_dot_AB and AM_dot_AB < AB_dot_AB and\
+               0 < AM_dot_AC and AM_dot_AC < AC_dot_AC        
+        
+    def expanded_body(self, dt_x, dt_y = None): 
+        
+        if dt_y is None : dt_y = dt_x
+        assert self.w + dt_x > 0
+        assert self.h + dt_y > 0
+        
+        return calc_vertices(self.pos, self.h+dt_y, self.w+dt_x, self.angle)
+
+
+
 class InfantryUnit:
 
-    start_w = 30
-    start_h = 10
+    start_w = 50
+    start_h = 20
     min_w, max_w = 10, 50
-    # start_w = 20
-    # start_h = 10
-    # min_w, max_w = 10, 30
     mass = 1
     base_speed = 90
     max_speed = 220
+    
+    aurea_radius = 150
+    attack_range = 5
     
     text = "INF"
     
     @property
     def dist(self): return 5
     @property
-    def shape(self): return list(self.body.shapes)[0]
-    @property
-    def pos(self): return self.body.position
+    def pos(self): return self.body.pos
     
-    def __init__(self, game, pos, rot, col):
+    def __init__(self, game, pos, angle, col):
         self.health = 100
         self.speed = self.base_speed
         self.is_selected = False
         self.fighting_against = set()
-        self.disengage = False
-        
+        self.moving = False
         
         self.w, self.h = InfantryUnit.start_w, InfantryUnit.start_h
-        body = add_box(game.space, pos, self.w, self.h, rot, col, self.mass)
-        body.unit = self
-        self.set_dest(pos, body.angle)
+        body = Body(pos, self.w, self.h, angle, col, self.mass, self)
+
+        self.set_dest(pos, angle)
         
         game.objects.append(self)
         
@@ -127,18 +210,8 @@ class InfantryUnit:
         self.dest = dest; self.dest_angle = angle
  
     def change_shape(self, w, h):
-        self.game.space.remove(self.shape)
-        
-        shape = pymunk.Poly.create_box(self.body, (h, w), 0.0)
-        shape.mass = self.mass
-        shape.friction = 0.7
-        shape.color = self.col
-        self.game.space.add(shape)
-        
-        self.w, self.h = w, h
-
-
-
+        # TODO : changing shape gradually 
+        pass
 
 
     def move(self, dt, prop = 1):
@@ -147,59 +220,67 @@ class InfantryUnit:
         elif type(self.dest) != Vec2d:  dest = Vec2d(self.dest)
         else:                           dest = self.dest
         
-        speed = self.speed * prop#* dt
+        speed = self.speed * prop * dt
         
-        dd = ( dest - self.body.position).get_length_sqrd()
+        dd = ( dest - self.body.pos).get_length_sqrd()
         # print(dd)
         if dd > 3:
             
             if dd < 10: speed = 2
             
             if dd < 8:
-                self.body.velocity = 0,0
-                self.body.position = dest
+                self.body.pos = dest
                 self.body.angle = self.dest_angle
                 self.change_shape(self.w , self.h)
             else:
+                self.body.angle = (self.body.pos-self.dest).angle
                 
-                self.body.angle = (self.dest - self.body.position).angle
                 dv = Vec2d(speed, 0.0)
-                self.body.velocity = self.body.rotation_vector.cpvrotate(dv) 
+                rotation_vector = Vec2d(-1.,0.).rotated(self.body.angle)
+                self.body.pos += rotation_vector.cpvrotate(dv) 
+            
             
         else:
             self.body.velocity = 0,0
-            self.body.angular_velocity = 0.0
-            
-            # TODO : put this in a better pos
-            if len(self.fighting_against) == 0: self.body.angle = self.dest_angle
-            # self.body.position = dest
+            self.body.angle = self.dest_angle
     
     def update(self, dt):
         
-        
-        
         prop = 1
         
-        if len(self.fighting_against) > 0:
-            if not self.disengage:
-                angle = (list(self.fighting_against)[0].body.position-self.body.position).angle
-                self.body.unit.set_dest(self.body.position, angle)
-            
-            
-            no_enemy_in_range = True
-            for e in self.fighting_against:
+        
+        # Checking enemy and allies nearby
+        
+        allies = set()
+        enemies = set()
+        
+        for o in self.army.units:
+            if o == self: continue
+            if is_rect_circle_collision(self.body, o.body.pos, o.aurea_radius):
+                allies.add(o)
                 
-                e_bb = e.shape.bb
-                e_bb.expand(e_bb.center()+Vec2d(e.w/2*1.1,e.h/2*1.1))
-                e_bb.expand(e_bb.center()+Vec2d(-e.w/2*1.1,-e.h/2*1.1))
+        for o in self.army.enemy.units:
+            if o == self: continue
+        
+            # TODO : remember that archers have circular attack range
+            if do_polygons_intersect(self.body.expanded_body(self.attack_range), 
+                                     o.body.vertices):
+                enemies.add(o)
+                prop = 0.15
                 
-                if e_bb.contains(self.shape.bb): no_enemy_in_range = False
+                
+                
+        
+        print("allies", allies)
+        print("enemies", enemies)
+        
+        
+        
+        # if len(self.fighting_against) > 0:
+        #     if not self.disengage:
+        #         angle = (list(self.fighting_against)[0].body.pos-self.body.pos).angle
+        #         self.body.unit.set_dest(self.body.pos, angle)
             
-            print(no_enemy_in_range)
-            if not no_enemy_in_range:
-                prop = 0.8
-            else:
-                self.disengage = False
 
         self.move(dt, prop)
 
@@ -207,22 +288,16 @@ class InfantryUnit:
         
 
     def draw(self):
-        shape = self.shape
-        verts = []
-        for v in shape.get_vertices():
-            x = v.rotated(shape.body.angle)[0] + shape.body.position[0]
-            y = v.rotated(shape.body.angle)[1] + shape.body.position[1]
-            verts.append(to_pygame((x, y), self.game.screen))
-        pygame.draw.polygon(self.game.screen, self.col, verts)
+        vertices = self.body.vertices
         
-        draw_text(self.text, self.game.screen, self.font, self.pos, math.degrees(self.body.angle-np.pi/2))
+        pygame.draw.polygon(self.game.screen, self.col, vertices, 3)
+
+        draw_text(self.text, self.game.screen, self.font, self.pos, 
+                  math.degrees(np.pi/2-self.body.angle))
         
         if self.is_selected:
-            pos = shape.bb.left, shape.bb.top
-            w = shape.bb.right - shape.bb.left
-            h = shape.bb.top - shape.bb.bottom
-            p = to_pygame(pos, self.game.screen)
-            pygame.draw.rect(self.game.screen, RED, (*p, w, h), 2)    
+            pygame.draw.polygon(self.game.screen, RED, vertices, 2)
+ 
     
 
 
