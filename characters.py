@@ -123,7 +123,6 @@ def do_polygons_intersect(a, b):
             # polygons, and we know there is no overlap
             if (maxA < minB) or (maxB < minA):
                 return False;
-
     return True
 
 class Body:
@@ -132,7 +131,6 @@ class Body:
     def vertices(self): return calc_vertices(self.pos, self.h, self.w, self.angle)
     @property
     def area(self): return self.w * self.h
-    
     
     def __init__(self, pos, w, h, angle, col, mass, unit):
         self.pos = Vec2d(pos)
