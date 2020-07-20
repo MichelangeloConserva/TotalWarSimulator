@@ -14,10 +14,10 @@ from PIL import Image
 from sklearn.metrics import pairwise_distances
 from scipy.optimize import linear_sum_assignment
 
-# from characters import Army
 from utils import do_polygons_intersect, is_rect_circle_collision
 from characters import InfantryUnit, Army
 
+from geom_utils import vector_clipping, vect_linspace, vect_middles_of_linspace, get_BB
 
 WIDTH, HEIGHT = 500, 300
 UNIT_SIZE = 10
@@ -27,38 +27,6 @@ GHOST_RED = (255, 0, 0, 100)
 DARKGREEN = pygame.color.THECOLORS["darkgreen"]
 LEFT = 1
 RIGHT = 3
-
-def vector_clipping(v, min_length, max_length):
-    if v.length > max_length:
-        return v.normalized() * max_length
-    elif v.length < min_length:
-        return v.normalized() * min_length        
-    return v
-
-
-def vect_linspace(v1, v2, n):
-    prs = np.linspace(0,1, n+1).tolist()            
-    res = []
-    for i in range(n):
-        pr_start = prs[i]
-        pr_end = prs[i+1]
-        cur_start = v1*(pr_start) + (v2)*(1-pr_start)
-        cur_end = v1*(pr_end) + (v2)*(1-pr_end)
-        res.append((cur_start, cur_end))
-    return res
-        
-def vect_middles_of_linspace(v1,v2,n):
-    divs = np.linspace(0,1, n+2).tolist()[1:-1]
-    return np.array([(v1 * div + v2 * (1 - div)).int_tuple for div in divs])
-
-
-def get_BB(v1, v2):
-    v1,v2 = Vec2d(v1), Vec2d(v2)
-    left = min(v1.x, v2.x) #+ abs(v1.x - v2.x) / 2
-    bot  = min(v1.y, v2.y) #- abs(v1.y - v2.y) / 2
-    right = max(v1.x, v2.x) #+ abs(v1.x - v2.x) / 2
-    top  = max(v1.y, v2.y) #- abs(v1.y - v2.y) / 2
-    return pymunk.BB(left, bot, right, top)
 
 
 class Game:
