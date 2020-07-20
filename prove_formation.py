@@ -25,21 +25,14 @@ debug = False
 
 WIDTH, HEIGHT = 500, 300
 
-speed = 50
-max_speed = 150
+speed = 200
+max_speed = 500
 
 
 DIST = 2
 rest_length_intra = DIST + 10
 stifness_intra    = 10
-dumping_intra     = 2
-
-
-def draw_text(t, screen, font, pos, angle):
-    text = font.render(t, True, BLACK)
-    text = pygame.transform.rotate(text, angle)
-    text_rect = text.get_rect(center = pos)
-    screen.blit(text, text_rect)
+dumping_intra     = 1
 
 def add_intra_spring(unit):
     for j in range(3):
@@ -51,8 +44,8 @@ def add_intra_spring(unit):
                 n_r = unit.formation[j+1][i]
                 spring1 = pymunk.DampedSpring(u.body, n_r.body, Vec2d(), Vec2d(), 
                                               rest_length = rest_length_intra, 
-                                              stiffness = stifness_intra * 10, 
-                                              damping = dumping_intra / 3)
+                                              stiffness = stifness_intra * 3, 
+                                              damping = dumping_intra)
                 space.add(spring1)
             
             # right neighbour
@@ -65,10 +58,10 @@ def add_intra_spring(unit):
                 space.add(spring1)
 
 
-def spring_to_mantain(s,pos):
+def spring_to_mantain(s,s1):
     # for the attacker
     pos_static_body = pymunk.Body(body_type = pymunk.Body.STATIC)
-    pos_static_body.position = pos
+    pos_static_body.position = s1.body.position
     
     spring1 = pymunk.DampedSpring(s.body, pos_static_body, Vec2d(), Vec2d(), 
                                   rest_length = 0, 
@@ -99,31 +92,20 @@ def limit_velocity(body, gravity, damping, dt):
 
 class Soldier:
     def __init__(self, pos, radius, col = BLACK, coll = 1):
-        
-        # Body
         body = pymunk.Body()
         body.position = pos
         body.soldier = self
         body.velocity_func = limit_velocity
-        
-        # Concrete shape
         shape = pymunk.Circle(body, radius)
         shape.color = col
         shape.density = 5
         shape.friction = 1
-        shape.elasticity = 0.03
+        shape.elasticity = 0.01
         shape.mass = 50
         shape.collision_type = coll
-        
-        # Sensor
-        sensor = pymunk.Circle(body, radius * 1)
-        sensor.sensor = True
-        sensor.collision_type = coll
-        
-        space.add(body, shape, sensor)
+        space.add(body, shape)
         
         self.collided = False
-        self.enemy_in_range = set()
         
         self.body = body
         self.pos = pos
@@ -131,54 +113,28 @@ class Soldier:
         self.col = col
         
     def draw(self):
-        pos = to_pygame(self.body.position,screen)
-        
-        pygame.draw.circle(screen, self.col, pos, self.radius-1)
-        
-        # draw_text(str(len(self.enemy_in_range)), screen, font, pos, 
-        #           math.degrees(np.pi/2-self.body.angle))
-        
+        pygame.draw.circle(screen, self.col, to_pygame(self.body.position, screen), self.radius)
+
 
 
 
 def begin_solve(arbiter, sapce, _):
     # s1 starts the collision
+    
     s1, s2 = arbiter.shapes
+    s1.body.soldier.col = GREEN
     
-    
-    if  not s1.sensor and not s2.sensor:
-        s1.body.soldier.col = GREEN
-        
-        spring_to_mantain(s1, s2.body.position)
-        spring_to_mantain(s2, s2.body.position)
-    
-    elif s1.sensor and not s2.sensor:
-        s1.body.soldier.enemy_in_range.add(s2)
-    elif s2.sensor and not s1.sensor:
-        s2.body.soldier.enemy_in_range.add(s1)
+    spring_to_mantain(s1, s2)
+    spring_to_mantain(s2, s1)
     
     return True
-
-
-def separate_solve(arbiter, sapce, _):
-    # s1 starts the collision
-    s1, s2 = arbiter.shapes
-    
-    if s1.sensor and not s2.sensor:
-        s1.body.soldier.enemy_in_range.remove(s2)
-    elif s2.sensor and not s1.sensor:
-        s2.body.soldier.enemy_in_range.remove(s1)
-    
-    return True
-
-
 
 
 def post_solve(arbiter, sapce, _):
     # s1 starts the collision
     
     s1, s2 = arbiter.shapes
-    if s1.body.soldier.col == BLACK: s1.body.soldier.col = GREEN
+    s1.body.soldier.col = GREEN
     
     s1.body.soldier.collided = True
     s2.body.soldier.collided = True
@@ -201,7 +157,11 @@ space.add_collision_handler(3, 3).begin = lambda **kargs : False
 
 
 class Unit:
-    def __init__(self, dw = 0, h = HEIGHT/3, col = RED, t_col = 1, rot = np.pi/2):
+    
+    @property
+    def position(self): return sum([s.body.position for s in self.units]) / len(self.units)
+    
+    def __init__(self, dw = 0, h = HEIGHT/3, col = RED, t_col = 1, angle = np.pi/2):
         
         formation = []
         
@@ -210,12 +170,15 @@ class Unit:
             for i in range(10):
                 dest = ((WIDTH/2+dw)+i*(10+DIST), h+j*(10+DIST))
                 c = Soldier(dest, 5, col, t_col)
-                c.body.angle = rot
+                c.body.angle = angle
                 c.unit = self
                 c.dest = dest
                 units.append(c)
             formation += [units[-10:]]
         
+        self.h = 2*5 + 5/2 + (3-1)/2*(DIST)
+        
+        self.angle = angle
         self.formation = formation
         self.units = units
 
@@ -235,29 +198,24 @@ class Unit:
 
 alls = []
 
-
-
 unit  = Unit()
 unit.attacking = False
-unit_  = Unit(dw = -128)
-unit_.attacking = False
-
-unit1 = Unit(h = 2*HEIGHT/3, col = BLACK, t_col = 2, rot = -np.pi/2)
-unit1.attacking = True
-unit1_ = Unit(dw = -128, h = 2*HEIGHT/3, col = BLACK, t_col = 2, rot = -np.pi/2)
-unit1_.attacking = True
 
 add_intra_spring(unit)
-add_intra_spring(unit1)
-add_intra_spring(unit_)
-add_intra_spring(unit1_)
-
 
 alls.append(unit)
-alls.append(unit_)
-alls.append(unit1)
-alls.append(unit1_)
-   
+
+
+
+for s in unit.units:
+    if len(s.body.constraints) == 2:
+        s.col = GREEN
+
+
+
+
+
+
 
 
 
@@ -270,7 +228,13 @@ while True:
     for event in pygame.event.get():
         
         if event.type == MOUSEBUTTONDOWN:
-            pass
+            print(pygame.mouse.get_pos())
+            
+            
+            
+            
+            
+            
             
         if event.type == QUIT or \
             event.type == KEYDOWN and (event.key in [K_ESCAPE, K_q]): 
@@ -291,15 +255,20 @@ while True:
             for s in u.units: s.draw()
     
     
+    pygame.draw.circle(screen, BLACK, to_pygame(unit.position, screen), 5)
     
-    
+    head = to_pygame(unit.position+ Vec2d(unit.h,0.).rotated(unit.angle), screen)
+    pygame.draw.circle(screen, BLACK, head, 5)
+
+
+
     
     
     pygame.display.flip()
     
     if not pause:
         space.step(1/30.)
-        clock.tick()
+        clock.tick(30)
     
 
 
