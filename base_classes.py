@@ -1,0 +1,92 @@
+import pymunk
+import pygame
+
+from pymunk.pygame_util import to_pygame
+
+from utils.pymunk_utils import limit_velocity
+
+class Person:
+    
+    def __init__(self, game, pos, col, coll):
+        
+        # Linking
+        self.order = pos
+        self.col = col
+        self.game = game
+        
+        # Physics stuff
+        self.body = self.add_body(pos)
+        self.body.velocity_func = limit_velocity     
+        self.shape = self.add_shape(coll)
+        self.sensor = self.add_sensor(coll)
+        game.space.add(self.body, self.shape, self.sensor)
+        
+        # Variables
+        self.enemy_in_range = set()
+    
+    def set_dest(self, pos): self.order = pos
+    
+    def draw(self):
+        pos = to_pygame(self.body.position,self.game.screen)
+        pygame.draw.circle(self.game.screen, self.col, pos, self.radius-1)
+        
+        # draw_text(str(len(self.enemy_in_range)), screen, font, pos, 
+        #           math.degrees(np.pi/2-self.body.angle))
+        
+        
+    def add_body(self, *args, **kwargs):   raise NotImplementedError("add_body")
+    def add_shape(self, *args, **kwargs):  raise NotImplementedError("add_shape")
+    def add_sensor(self, *args, **kwargs): raise NotImplementedError("add_sensor")
+    def update(self, *args, **kwargs):     raise NotImplementedError("add_sensor")
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
