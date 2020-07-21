@@ -22,7 +22,7 @@ class Melee_Soldier(Person):
     
     melee_range = 1
     max_speed   = 90
-    base_speed  = 120
+    base_speed  = 50
     # max_speed   = 300
     # base_speed  = 350
     

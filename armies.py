@@ -69,8 +69,8 @@ class Army:
         coll   = 1 if role == "Attacker" else 2
         
         # Infantry
-        # TODO : select a meaningful value for start ranks (10)
-        formation, _  = get_formation(np.array(pos), angle, 1, units[0], Melee_Unit.start_width*units[0], 5)
+        # TODO : select a meaningful value for start ranks (1)
+        formation, _  = get_formation(np.array(pos), angle, 1, units[0], Melee_Unit.start_width, 25)
 
         infantry = []
         for p in formation:
@@ -84,30 +84,26 @@ class Army:
         self.role = role
     
     
+    
     def move_units_with_formation(self, selected_units, start_pos, end_pos, send_command = False):
         
         if len(selected_units) == 0: return
         
-        dd = (start_pos-end_pos).get_length_sqrd()
-        
-        if  dd < 30**2: # Just one click
+        dd = (start_pos-end_pos).get_length()
+        if  dd < 50: # Just one click
             total_w = 0
             units_pos = Vec2d((0,0))
-            for u in selected_units:
-                total_w += u.width + u.dist
+            for i,u in enumerate(selected_units):
+                total_w += u.width + (u.dist if i != len(selected_units)-1 else 0)
+                
+                # I am not sure why but add this is necessary
+                total_w += sum(u.soldier_size_dist)
                 units_pos += u.pos / len(selected_units)
         
             front_line = (end_pos - units_pos).perpendicular_normal()
             
-            start_pos = end_pos + front_line * total_w / 2 
-            end_pos = end_pos - front_line * total_w / 2 
-            
-            start_pos = Vec2d(start_pos)
-            end_pos = Vec2d(end_pos)                
-        
-        else:           
-            start_pos = Vec2d(start_pos)
-            end_pos = Vec2d(end_pos)
+            start_pos = end_pos + front_line * total_w / 2
+            end_pos = end_pos - front_line * total_w / 2      
         
         
         diff_vect_all = start_pos-end_pos
@@ -117,8 +113,9 @@ class Army:
         for u in selected_units:
             max_row_l += u.max_width  + u.dist
             min_row_l += u.min_width  + u.dist
-            
         diff_vect_all = vector_clipping(diff_vect_all, min_row_l, max_row_l)
+        
+        
         start_ends = vect_linspace(start_pos, start_pos - diff_vect_all, len(selected_units))
 
         units = list(selected_units)
@@ -131,43 +128,27 @@ class Army:
         
         for ri,ci in zip(row_ind,col_ind): 
             u = units[ri]
-            
             front_line = start_ends[ci][0] - start_ends[ci][1]
-            width = front_line.length - u.dist*2
+            width = front_line.length 
             
             if width > 5:
                 size, dist = u.soldier_size_dist
-                
                 upr = width / (size+dist)
                 n_ranks = int(np.ceil(u.n / upr))
                 angle = front_line.angle
                 
-                formation, ranks_ind = get_formation(np.array(list(divs[ci])), angle, 
-                                          n_ranks, u.n, size, dist)      
-                
-                u.angle = angle
-                
-                
-                # if send_command:
-                aa = Vec2d(1,0)
-                aa.rotate(angle)
-                
-                invert = aa.dot((u.pos-divs[ci]).perpendicular()) < 0
-                
-                
-                if invert: angle = (divs[ci]-u.pos).perpendicular().angle
-                else:      angle = (u.pos-divs[ci]).perpendicular().angle
-                
-                form_first, ranks_ind_first = get_formation(np.array(list(u.pos)), angle, 
-                                          n_ranks, u.n, size, dist)
-                
-                
                 if send_command:
+                    # Sending the command to the unit
+                    u.move_at_point(divs[ci], final_angle = angle, n_ranks = n_ranks)
                     u.n_ranks = n_ranks
-                    u.move_at(formation, form_first, ranks_ind)
                 else:
+                    # Just drawing the formation
+                    formation, ranks_ind = get_formation(np.array(list(divs[ci])), angle, 
+                                                              n_ranks, u.n, size, dist)                          
                     for p in formation:
-                        self.draw_circle(p, 10//2, RED)
+                        self.draw_circle(p, 10//2, RED)                
+                
+                
     
 
     def draw_circle(self, pos, r, c):    
@@ -177,29 +158,11 @@ class Army:
         pygame.draw.circle(self.game.screen, c, [to_pygame(v, self.game.screen) for v in vs], w)
     
     
-    
-    def update(self, dt):
+    def update(self, dt): 
         for u in self.units: u.update(dt)
 
     def draw(self): 
         for u in self.units: u.draw()
-
-        try:
-            self.prova
-        except:
-            return            
-        pos = Vec2d(self.prova)*10 + Vec2d(400,300)
-        pygame.draw.circle(self.game.screen, GREEN, pos.int_tuple, 5)
-        pygame.draw.circle(self.game.screen, GREEN, Vec2d(400,300), 5)
-        print(self.prova)
-            
-            
-
-
-
-
-
-
 
 
 

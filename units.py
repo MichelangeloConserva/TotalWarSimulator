@@ -22,66 +22,67 @@ RED = (255, 0, 0)
 stifness_intra    = 4
 dumping_intra     = 2
 
-
-
-
-def calc_width(n, n_ranks):
-    return (n/n_ranks)*Melee_Soldier.radius + (n/n_ranks-1) * Melee_Soldier.dist
+def calc_width(upr):
+    return upr*Melee_Soldier.radius*2 + (upr-1) * Melee_Soldier.dist
 
 class Melee_Unit:
     
     start_n = 50 # 100
     start_ranks = 5
-    start_width = calc_width(start_n, start_ranks)
+    start_width = calc_width(start_n//start_ranks)
     dist = 5
     
     @property
     def soldier_size_dist(self): return Melee_Soldier.radius*2, Melee_Soldier.dist
     @property
-    def max_width(self): return calc_width(self.n, 2)
+    def max_width(self): return calc_width(self.n//3)
     @property
-    def min_width(self): return calc_width(self.n, 5)
+    def min_width(self): return calc_width(self.n//10)
     @property
-    def width(self):     return calc_width(self.n, self.n_ranks)
+    def width(self):     return calc_width(len(self.ranks[0]))
     @property
     def pos(self): return sum(self.soldiers_pos) / len(self.soldiers)
     @property
     def soldiers_pos(self): return [s.body.position for s in self.soldiers]
     @property
     def border_units(self): return [s for s in self.soldiers if len(s.body.constraints) <= 3]
+    @property
+    def target_unit(self): return self._target_unit
+    @target_unit.setter
+    def target_unit(self, tu):
+        self._target_unit = tu
+        if tu is None: return
+        
+        # Facing the enemy unit
+        self.move_at_point(tu.pos, remove_tu=False)
+        
+
     
     def __init__(self, game, pos, angle, col, coll):
-        
         
         self.col = col
         self.coll = coll
         self.game = game        
-        self.angle = angle
         
         
         self.add_soldiers()
 
         
-        size, dist = Melee_Soldier.radius*2, Melee_Soldier.dist
+        size, dist = self.soldier_size_dist
         formation, ranks_ind = get_formation(pos, angle, self.start_ranks, 
                                      self.start_n, size, dist)
-
-
         self.execute_formation(formation, ranks_ind, set_physically = True)
-        
-        
 
         
         self.n = self.start_n
         self.n_ranks = self.start_ranks
         
-        self.target_unit = None
+        self._target_unit = None
         self.is_selected = False
+        self.order = None
+        self.before_order = None
         self.springs = []
 
-        
-        self.before_order = None
-        
         
     def add_soldiers(self):        
         soldiers = []
@@ -93,6 +94,8 @@ class Melee_Unit:
         
         
     def execute_formation(self, formation, ranks_ind, set_physically = False):
+        
+        # Storing the rank information
         self.ranks = [[] for _ in range(max(ranks_ind.values())+1)]
         
         pd = pairwise_distances(formation, self.soldiers_pos)
@@ -101,19 +104,13 @@ class Melee_Unit:
             d = Vec2d(formation[i].tolist())
             
             if set_physically:  self.soldiers[col_ind[i]].body.position = d
-                
+            
+            # Each soldiers knows its destination and is in a particular rank
             self.soldiers[col_ind[i]].set_dest(d)
             self.ranks[ranks_ind[i]].append(self.soldiers[col_ind[i]])        
         
         
-        self.order = formation
-        self.formation = formation
-
-
-        
-        
-    def move_at(self, formation, formation_first, ranks_ind):
-        
+    def move_at(self, formation, formation_first, ranks_ind, remove_tu = True):
         # self.before_order = self.soldiers_pos.copy()
         
         # Removing springs while changing formation
@@ -121,14 +118,43 @@ class Melee_Unit:
         self.springs = []
         
         # Remove target unit if changing pos
-        self.target_unit = None
+        if remove_tu: self.target_unit = None
         
         # Changing formation
         self.execute_formation(formation_first, ranks_ind)
 
         # Order to complete after changing formation
         self.order = formation
-        # self.ranks_ind = ranks_ind            
+        
+        
+    def move_at_point(self, final_pos, final_angle = None, n_ranks = None, remove_tu = True):
+
+        start_pos = self.pos
+        angle = (start_pos-final_pos).perpendicular().angle  # TODO : save variable for diff
+        
+        if final_angle is None: final_angle = angle
+        if n_ranks     is None: n_ranks     = self.n_ranks
+        
+        
+        
+        # Checking if the unit formatio must be rotated
+        looking_dir = Vec2d(1,0).rotated(final_angle)
+        invert = looking_dir.dot((start_pos-final_pos).perpendicular()) < 0
+        if invert: angle = (final_pos-start_pos).perpendicular().angle
+        else:      angle = (start_pos-final_pos).perpendicular().angle
+
+
+        
+        size, dist = self.soldier_size_dist
+        changed_formation, _ = get_formation(np.array(list(start_pos)), angle, n_ranks, 
+                                     self.n, size, dist)
+
+        final_formation, ranks_ind = get_formation(np.array(list(final_pos)), final_angle, n_ranks, 
+                                     self.n, size, dist)
+
+        self.move_at(final_formation, changed_formation, ranks_ind, remove_tu = remove_tu)
+        
+        
         
 
     # TODO : refactor
@@ -239,7 +265,6 @@ class Melee_Unit:
     
     
         # Attack code
-    
         if self.order is None and not self.target_unit is None:
     
             enemy_border_units = self.target_unit.border_units
@@ -263,13 +288,6 @@ class Melee_Unit:
                     s.set_dest(s.front_nn.body.position)
     
 
-    
-    
-    
-    
-    
-    
-    
     
     
     
@@ -310,7 +328,7 @@ class Melee_Unit:
                 
                 s.body.angular_velocity = 0.
                 s.body.angle = direction.angle
-                f = speed * s.mass 
+                f = speed * s.mass * 10
                 s.body.apply_force_at_local_point(Vec2d(f,0), Vec2d(0,0))
                 # s.body.apply_impulse_at_local_point(Vec2d(speed,0), Vec2d(0,0))
                 # print(s.body.force)
