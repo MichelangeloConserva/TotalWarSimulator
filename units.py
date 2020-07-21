@@ -1,16 +1,28 @@
 import numpy as np
 import pygame
+import pymunk
 
 from pymunk.vec2d import Vec2d
 from sklearn.metrics import pairwise_distances
 from scipy.optimize import linear_sum_assignment
 from pymunk.pygame_util import to_pygame, from_pygame
 
+
+
 from soldiers import Melee_Soldier
 from utils.unit_utils import get_formation
 from utils.pygame_utils import draw_text
 
+
+RED = (255, 0, 0)
+
+
 # HURRY_THRESHOLD = 0.3
+
+stifness_intra    = 4
+dumping_intra     = 2
+
+
 
 
 def calc_width(n, n_ranks):
@@ -28,77 +40,98 @@ class Melee_Unit:
     @property
     def max_width(self): return calc_width(self.n, 2)
     @property
-    def min_width(self): return calc_width(self.n, 2)
+    def min_width(self): return calc_width(self.n, 5)
     @property
     def width(self):     return calc_width(self.n, self.n_ranks)
     @property
     def pos(self): return sum(self.soldiers_pos) / len(self.soldiers)
     @property
     def soldiers_pos(self): return [s.body.position for s in self.soldiers]
-    
+    @property
+    def border_units(self): return [s for s in self.soldiers if len(s.body.constraints) <= 3]
     
     def __init__(self, game, pos, angle, col, coll):
         
-        size, dist = Melee_Soldier.radius*2, Melee_Soldier.dist
-        formation, _ = get_formation(pos, angle, self.start_ranks, 
-                                     self.start_n, size, dist)
         
-        soldiers = []
-        for i,p in enumerate(formation[::-1]):
-            s = Melee_Soldier(game, Vec2d(p.tolist()), col, coll)
-            # s = Melee_Soldier(game, Vec2d(p), col, coll)
-            s.unit = self
-            soldiers.append(s)
-        
-        self.formation = formation
-        self.soldiers = soldiers
         self.col = col
-        self.game = game
+        self.coll = coll
+        self.game = game        
+        self.angle = angle
+        
+        
+        self.add_soldiers()
+
+        
+        size, dist = Melee_Soldier.radius*2, Melee_Soldier.dist
+        formation, ranks_ind = get_formation(pos, angle, self.start_ranks, 
+                                     self.start_n, size, dist)
+
+
+        self.execute_formation(formation, ranks_ind, set_physically = True)
+        
+        
+
         
         self.n = self.start_n
         self.n_ranks = self.start_ranks
         
+        self.target_unit = None
         self.is_selected = False
+        self.springs = []
+
         
-        nps = np.array(soldiers)
-        self.ranks = nps.reshape((self.n_ranks, -1))#.tolist()
-        
-        
-        self.order = None
         self.before_order = None
         
         
-    def min_cost_assignment(self, formation):
-        pd = pairwise_distances(self.soldiers_pos, formation)
+    def add_soldiers(self):        
+        soldiers = []
+        for _ in range(self.start_n):
+            s = Melee_Soldier(self.game, Vec2d(), self.col, self.coll)
+            s.unit = self
+            soldiers.append(s)        
+        self.soldiers = soldiers
+        
+        
+    def execute_formation(self, formation, ranks_ind, set_physically = False):
+        self.ranks = [[] for _ in range(max(ranks_ind.values())+1)]
+        
+        pd = pairwise_distances(formation, self.soldiers_pos)
         row_ind, col_ind = linear_sum_assignment(pd) 
         for i in range(len(row_ind)):
-            d = Vec2d(formation[col_ind[i]].tolist())
-            self.soldiers[row_ind[i]].set_dest(d)        
+            d = Vec2d(formation[i].tolist())
+            
+            if set_physically:  self.soldiers[col_ind[i]].body.position = d
+                
+            self.soldiers[col_ind[i]].set_dest(d)
+            self.ranks[ranks_ind[i]].append(self.soldiers[col_ind[i]])        
+        
+        
+        self.order = formation
+        self.formation = formation
+
+
         
         
     def move_at(self, formation, formation_first, ranks_ind):
         
-        self.before_order = self.soldiers_pos.copy()
+        # self.before_order = self.soldiers_pos.copy()
         
+        # Removing springs while changing formation
+        for s in self.springs: self.game.space.remove(s)
+        self.springs = []
+        
+        # Remove target unit if changing pos
+        self.target_unit = None
+        
+        # Changing formation
+        self.execute_formation(formation_first, ranks_ind)
+
+        # Order to complete after changing formation
         self.order = formation
-        self.order_time = pygame.time.get_ticks() 
+        # self.ranks_ind = ranks_ind            
         
-        
-        formation = formation_first
-        # Front Line is occupied first
-        s_left = self.soldiers.copy()
-        for r in ranks_ind:
-            c_form = formation[r]
-            soldiers_pos = [s.body.position for s in s_left]
-            pd = pairwise_distances(soldiers_pos, c_form)
-            row_ind, col_ind = linear_sum_assignment(pd) 
-                
-            for i in range(len(row_ind)):
-                s_left[row_ind[i]].set_dest(Vec2d(c_form[col_ind[i]].tolist()))      
-            s_left = [s_left[i]  for i in range(len(s_left))  if i not in row_ind]
-                
 
-
+    # TODO : refactor
     def update(self, dt):
     
         ds = [(s.body.position-s.order).length for s in self.soldiers]
@@ -106,28 +139,142 @@ class Melee_Unit:
         if not self.order is None:
             # if pygame.time.get_ticks()  - self.order_time > 2000 or max(ds) < Melee_Soldier.radius/2:
             if max(ds) < Melee_Soldier.radius/2:
-                self.min_cost_assignment(self.order)
-                self.order = None
                 
-                # Create springs
-                for s in self.soldiers:
-                    for s1 in self.soldiers:
-                        if s == s1: continue
-                    
-                        d = (s.body.position-s1.body.position).length
-                        if d - (s.dist + s.radius*2) < 1:
-                            print(s.dist, d)
+                
+                ranks = self.ranks
+                space = self.game.space
+                k = 0
+                for i in range(len(ranks)-1):
+                    for j in range(len(ranks[i])):
+                        s = ranks[i][j]
                         
+                        
+                        s.set_dest(Vec2d(self.order[k].tolist()))
+                        k += 1
+
+                        
+                        rest_length_intra = s.radius*2 + s.dist
+                        
+                        # right neighbour
+                        if j + 1 < len(ranks[i]):
+                            n_r = ranks[i][j+1]
+                            spring1 = pymunk.DampedSpring(s.body, n_r.body, Vec2d(), Vec2d(), 
+                                                          rest_length = rest_length_intra, 
+                                                          stiffness = stifness_intra * 10, 
+                                                          damping = dumping_intra / 3)
+                            space.add(spring1)
+                            self.springs.append(spring1)
+                            
+                            # Linking neighbours
+                            s.right_nn = n_r
+                            n_r.left_nn = s
+                            
+                            
+                            
+                        
+                        if i == len(ranks)-2: continue
+                        # bot neighbour
+                        if i + 1 < len(ranks):
+                            n_r = ranks[i+1][j]
+                            spring1 = pymunk.DampedSpring(s.body, n_r.body, Vec2d(), Vec2d(), 
+                                                          rest_length = rest_length_intra, 
+                                                          stiffness = stifness_intra , 
+                                                          damping = dumping_intra)
+                            space.add(spring1)
+                            self.springs.append(spring1)
+                            
+                            # Linking neighbours
+                            s.bot_nn = n_r
+                            n_r.front_nn = s                            
+                            
+                            
                 
+                # The last rank must be treated differently since it may have less soldiers
                 
+                for j in range(len(ranks[-1])):
+                    s = ranks[-1][j]
                 
+                    s.set_dest(Vec2d(self.order[k].tolist()))
+                    k += 1                    
+            
+                    # right neighbour
+                    if j + 1 < len(ranks[-1]):
+                        n_r = ranks[-1][j+1]
+                        spring1 = pymunk.DampedSpring(s.body, n_r.body, Vec2d(), Vec2d(), 
+                                                      rest_length = rest_length_intra, 
+                                                      stiffness = stifness_intra * 10, 
+                                                      damping = dumping_intra / 3)
+                        space.add(spring1)
+                        self.springs.append(spring1)                
+            
+                        # Linking neighbours
+                        s.right_nn = n_r
+                        n_r.left_nn = s
+                                    
+            
+            
+                    front_nn = np.argmin([(s.body.position-o.body.position).length for o in ranks[-2]])
+                    
+                    n_r = ranks[-2][front_nn]
+                    spring1 = pymunk.DampedSpring(s.body, n_r.body, Vec2d(), Vec2d(), 
+                                                  rest_length = rest_length_intra, 
+                                                  stiffness = stifness_intra * 10, 
+                                                  damping = dumping_intra / 3)
+                    space.add(spring1)
+                    self.springs.append(spring1)                     
+        
+                    s.front_nn = n_r
+                    n_r.bot_nn = s                
+        
+        
+        
+                self.order = None
+            
+    
+    
+    
+    
+    
+    
+    
+    
+        # Attack code
+    
+        if self.order is None and not self.target_unit is None:
+    
+            enemy_border_units = self.target_unit.border_units
+    
+    
+            enemy_pos = np.array([list(s.body.position) for s in enemy_border_units])
+            frontline_pos = np.array([list(s.body.position) for s in self.ranks[0]])
+            
+            pd = pairwise_distances(frontline_pos, enemy_pos)
+            row_ind, col_ind = linear_sum_assignment(pd)
+            
+            for ri,ci in zip(row_ind, col_ind):
+                s_our = self.ranks[0][ri]
+                s_enemy = enemy_border_units[ci]
+        
+                s_our.set_dest(s_enemy.body.position)
+            
+            
+            for i in range(1, len(self.ranks)):
+                for s in self.ranks[i]:
+                    s.set_dest(s.front_nn.body.position)
+    
 
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
         # Moving the soldiers
-        
-        # hurry_th = np.quantile(ds, HURRY_THRESHOLD)
-        # max_d = max(ds)
-        
         for i,s in enumerate(self.soldiers):
             
             d = ds[i]
@@ -144,7 +291,6 @@ class Melee_Unit:
             s.body.angle = direction.angle
 
 
-
             if not self.order is None:
 
                 if (s.order - s.body.position).get_length_sqrd() < 1:
@@ -154,6 +300,7 @@ class Melee_Unit:
                     s.body.velocity = s.body.rotation_vector.cpvrotate(dv)           
         
             else:
+            
                 # Using IMPULSE
                 # Killing lateral velocity
                 lat_dir = s.body.local_to_world(Vec2d(1,0)) - s.body.position
@@ -161,12 +308,14 @@ class Melee_Unit:
                 imp = s.body.mass * -lat_vel
                 s.body.apply_force_at_world_point(imp, s.body.position)
                 
-                
                 s.body.angular_velocity = 0.
                 s.body.angle = direction.angle
-                s.body.apply_force_at_local_point(Vec2d(speed * s.mass,0), Vec2d(0,0))
+                f = speed * s.mass 
+                s.body.apply_force_at_local_point(Vec2d(f,0), Vec2d(0,0))
                 # s.body.apply_impulse_at_local_point(Vec2d(speed,0), Vec2d(0,0))
-        
+                # print(s.body.force)
+                
+                
         
         for s in self.soldiers: s.update(dt)
         
@@ -175,10 +324,9 @@ class Melee_Unit:
     def draw(self):
         for s in self.soldiers: s.draw()
 
-        # for i,r in enumerate(self.cols):
-        #     for s in r:
-        #         p = to_pygame(s.body.position, self.game.screen)
-        #         draw_text(str(i), self.game.screen, self.game.font, p, 0)
+        for i,r in enumerate(self.ranks):
+            for s in r:
+                draw_text(str(i), self.game.screen, self.game.font, s.body.position, 0)
     
         # if not self.before_order is None:
         #     for i,s in enumerate(self.soldiers):
@@ -186,21 +334,37 @@ class Melee_Unit:
         #         draw_text(str(i), self.game.screen, self.game.font, s.body.position, 0)
                 
                 
+                
+        # for s in self.ranks[-1]:
+        #     draw_text(str(1), self.game.screen, self.game.font, s.body.position, 0)            
+        #     pos = s.front_nn.body.position
+        #     draw_text("f", self.game.screen, self.game.font, pos, 0)            
+    
+    
+    
+        # for s in self.border_units:
+        #     draw_text(str(1), self.game.screen, self.game.font, s.body.position, 0)            
+
+    
+        if self.army.role == "Defender": return        
+
+        
+        if not self.target_unit is None:
+    
+            enemy_pos = np.array([list(s.body.position) for s in self.target_unit.border_units])
+            frontline_pos = np.array([list(s.body.position) for s in self.ranks[0]])
             
+            pd = pairwise_distances(frontline_pos, enemy_pos)
+            row_ind, col_ind = linear_sum_assignment(pd)
             
+            for ri,ci in zip(row_ind, col_ind):
+                p1 = to_pygame(frontline_pos[ri], self.game.screen)
+                p2 = to_pygame(enemy_pos[ci], self.game.screen)
+        
+                pygame.draw.aalines(self.game.screen, RED, False, [p1,p2])        
+        
     
     
-    
-    
-
-
-
-
-
-
-
-
-
 
 
 

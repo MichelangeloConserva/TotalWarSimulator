@@ -6,18 +6,19 @@ from pymunk.pygame_util import to_pygame
 from base_classes import Person
 
 WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 
 class Melee_Soldier(Person):
     
     # density = 1
     friction = 1
-    elasticity = 0.03
-    mass = 90
+    elasticity = 0.9
+    mass = 5
     
-    # radius = 5
-    # dist = 2.5
     radius = 10
-    dist =   5
+    dist = 5
+    # radius = 5
+    # dist =   2.5
     
     melee_range = 1
     max_speed   = 90
@@ -27,6 +28,8 @@ class Melee_Soldier(Person):
     
     def __init__(self, game, pos, col, coll):
         Person.__init__(self, game, pos, col, coll)
+        
+        self.size = 2*self.radius+self.dist
     
     def add_body(self, pos):   
         body = pymunk.Body()
@@ -58,7 +61,7 @@ class Melee_Soldier(Person):
         pygame.draw.circle(self.game.screen, self.col, pos, self.radius-1)
 
         if self.unit.is_selected:
-            pygame.draw.circle(self.game.screen, WHITE, pos, self.radius-3)
+            pygame.draw.circle(self.game.screen, BLACK, pos, self.radius-3)
 
 
 

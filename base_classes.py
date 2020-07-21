@@ -25,12 +25,16 @@ class Person:
         
         # Variables
         self.enemy_in_range = set()
+        self.front_nn = None
+        self.bot_nn = None
+        self.left_nn = None
+        self.right_nn = None
     
     def set_dest(self, pos): self.order = pos
     
     def draw(self):
         pos = to_pygame(self.body.position,self.game.screen)
-        pygame.draw.circle(self.game.screen, self.col, pos, self.radius-1)
+        pygame.draw.circle(self.game.screen, self.col, pos, self.radius)
         
         # draw_text(str(len(self.enemy_in_range)), screen, font, pos, 
         #           math.degrees(np.pi/2-self.body.angle))

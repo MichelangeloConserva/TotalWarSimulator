@@ -17,7 +17,7 @@ from armies import Army
 from utils.pymunk_utils import create_space
 from utils.geom_utils import do_polygons_intersect
 
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1200, 800
 UNIT_SIZE = 10
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
@@ -73,7 +73,7 @@ def spring_to_mantain(s, pos, space):
     space.add(spring1)    
 
 
-def begin_solve_ally(arbiter, sapce, _):
+def begin_solve_ally(arbiter, space, _):
     # s1 starts the collision
     s1, s2 = arbiter.shapes
     
@@ -90,7 +90,7 @@ def begin_solve_ally(arbiter, sapce, _):
     
     return True
 
-def separate_solve_ally(arbiter, sapce, _):
+def separate_solve_ally(arbiter, space, _):
     # s1 starts the collision
     s1, s2 = arbiter.shapes
     
@@ -106,17 +106,20 @@ def separate_solve_ally(arbiter, sapce, _):
     
     return True
 
-def begin_solve_enemy(arbiter, sapce, _):
+def begin_solve_enemy(arbiter, space, _):
     # s1 starts the collision
     s1, s2 = arbiter.shapes
     
-    # if  not s1.sensor and not s2.sensor:
-    #     spring_to_mantain(s1, s2.body.position, s1.body.soldier.game.space)
-    #     spring_to_mantain(s2, s2.body.position, s1.body.soldier.game.space)
+    # if not s1.sensor and not s2.sensor:
+    #     print("impulse")
+    #     f = s1.mass * s1.body.velocity
+    #     s2.body.apply_impulse_at_world_point(f, s2.body.position)
+        
+        
     
     return True
 
-def separate_solve_enemy(arbiter, sapce, _):
+def separate_solve_enemy(arbiter, space, _):
     # s1 starts the collision
     s1, s2 = arbiter.shapes
     
@@ -131,12 +134,13 @@ def separate_solve_enemy(arbiter, sapce, _):
 
 class Game:
     
-    def __init__(self, u_att = (2,0,0), u_def = (1,0,0), record = True):
+    def __init__(self, u_att = (3,0,0), u_def = (1,0,0), record = True):
 
         self.objects = []
         self.video = []
         self.fps = 60.0 
         self.done = False
+        self.attack_command = False
         self.record = record
     
         pygame.init()
@@ -180,7 +184,7 @@ class Game:
     
     
     def initiate_armies(self, u_att, u_def):
-        self.attacker = Army(self, (WIDTH/2, 5*HEIGHT/6), WIDTH, HEIGHT, 
+        self.attacker = Army(self, (WIDTH/2, 4*HEIGHT/6), WIDTH, HEIGHT, 
                               units = u_att)
         self.defender = Army(self, (WIDTH/2, HEIGHT/6), WIDTH, HEIGHT, 
                               units = u_def, role = "Defender")
@@ -195,15 +199,22 @@ class Game:
             self.drag_lmb = True
         
         elif event.button == RIGHT:
-            self.start_pos_rmb = event.pos
             
-            # for u in self.defender.units:
-            #     if u.body.contains_vect(Vec2d(self.start_pos_rmb)):
-            #         for au in self.selected_units: 
-            #             au.set_dest(u.body.position, (u.body.position - au.body.position).angle)
-            #             return
-            self.drag_rmb = True    
+            if len(self.selected_units) == 0: return
+            
+            self.start_pos_rmb = Vec2d(from_pygame(event.pos, self.screen))
+            
+            for u in self.defender.units:
+                for s in u.soldiers:
+                    if (s.body.position - self.start_pos_rmb).length < s.radius*2+s.dist:
+                        print("attack")
+                        self.attack_command  = True
+                        for su in self.selected_units:
+                            su.target_unit = u
+                        
+                        return
                 
+            self.drag_rmb = True    
                 
     def on_mouse_up(self, event):
         
@@ -235,7 +246,12 @@ class Game:
                 
                 
         elif event.button == RIGHT:
-            start_pos = Vec2d(from_pygame(self.start_pos_rmb, self.screen))
+            
+            if self.attack_command:
+                self.attack_command = False
+                return
+            
+            start_pos = self.start_pos_rmb
             end_pos = Vec2d(from_pygame(event.pos, self.screen))
             
             if len(self.selected_units) != 0:
@@ -247,7 +263,7 @@ class Game:
     
     def draw(self):
         if self.drag_rmb:
-            start_pos = Vec2d(from_pygame(self.start_pos_rmb, self.screen))
+            start_pos = self.start_pos_rmb
             end_pos = Vec2d(from_pygame(pygame.mouse.get_pos(), self.screen))
             
             # Drawing the ghost of the formation
@@ -289,23 +305,29 @@ class Game:
                     event.type == KEYDOWN and (event.key in [K_ESCAPE, K_q]): 
                     pygame.quit()
                     self.done = True
-                    # self.save_video()   # might take some time to run
+                    self.save_video()   # might take some time to run
                     return
             
                 elif event.type == MOUSEBUTTONDOWN: self.on_mouse_down(event)
                 elif event.type == MOUSEBUTTONUP:   self.on_mouse_up(event)
         
             
-        
             self.update(1/self.fps)
             
             if DEBUG: self.space.debug_draw(self.draw_options)
             
             self.draw()
             
+            fps = self.font.render(str(int(self.clock.get_fps())), True, pygame.Color('black'))
+            self.screen.blit(fps, (50, 50))            
+                
             pygame.display.flip()
             self.clock.tick(self.fps)
-                        
+            
+            
+            
+            
+            
             if self.record:
                 arr = pygame.surfarray.array3d(self.screen).swapaxes(1, 0)
                 self.video.append(arr.astype(np.uint8))

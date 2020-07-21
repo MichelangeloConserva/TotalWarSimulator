@@ -17,6 +17,7 @@ RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
 GHOST_RED = (255, 0, 0, 100)
 DARKGREEN = pygame.color.THECOLORS["darkgreen"]
 
@@ -63,8 +64,8 @@ class Army:
     
     def __init__(self, game, pos, WIDTH, HEIGHT, units = (2, 0, 0),
                  role = "Attacker"):
-        angle  = 0 if role == "Attacker" else np.pi
-        col    = RED if role == "Attacker" else BLACK
+        angle  = np.pi if role == "Attacker" else 0
+        col    = DARKGREEN if role == "Attacker" else BLUE
         coll   = 1 if role == "Attacker" else 2
         
         # Infantry
@@ -80,6 +81,7 @@ class Army:
         self.infantry = infantry
         self.formation = formation
         self.game = game
+        self.role = role
     
     
     def move_units_with_formation(self, selected_units, start_pos, end_pos, send_command = False):
@@ -141,9 +143,24 @@ class Army:
                 angle = front_line.angle
                 
                 formation, ranks_ind = get_formation(np.array(list(divs[ci])), angle, 
-                                          n_ranks, u.n, size, dist)                
+                                          n_ranks, u.n, size, dist)      
+                
+                u.angle = angle
+                
+                
+                # if send_command:
+                aa = Vec2d(1,0)
+                aa.rotate(angle)
+                
+                invert = aa.dot((u.pos-divs[ci]).perpendicular()) < 0
+                
+                
+                if invert: angle = (divs[ci]-u.pos).perpendicular().angle
+                else:      angle = (u.pos-divs[ci]).perpendicular().angle
+                
                 form_first, ranks_ind_first = get_formation(np.array(list(u.pos)), angle, 
                                           n_ranks, u.n, size, dist)
+                
                 
                 if send_command:
                     u.n_ranks = n_ranks
@@ -166,6 +183,19 @@ class Army:
 
     def draw(self): 
         for u in self.units: u.draw()
+
+        try:
+            self.prova
+        except:
+            return            
+        pos = Vec2d(self.prova)*10 + Vec2d(400,300)
+        pygame.draw.circle(self.game.screen, GREEN, pos.int_tuple, 5)
+        pygame.draw.circle(self.game.screen, GREEN, Vec2d(400,300), 5)
+        print(self.prova)
+            
+            
+
+
 
 
 
