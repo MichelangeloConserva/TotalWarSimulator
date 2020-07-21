@@ -27,7 +27,7 @@ LEFT = 1
 RIGHT = 3
 
 
-DEBUG = True
+DEBUG = False
 
 
 
