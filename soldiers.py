@@ -9,18 +9,21 @@ WHITE = (255, 255, 255)
 
 class Melee_Soldier(Person):
     
-    density = 1
+    # density = 1
     friction = 1
     elasticity = 0.03
     mass = 90
     
-    radius = 5
-    
-    dist = 2.5
+    # radius = 5
+    # dist = 2.5
+    radius = 10
+    dist =   5
     
     melee_range = 1
     max_speed   = 90
     base_speed  = 120
+    # max_speed   = 300
+    # base_speed  = 350
     
     def __init__(self, game, pos, col, coll):
         Person.__init__(self, game, pos, col, coll)
@@ -34,7 +37,7 @@ class Melee_Soldier(Person):
     def add_shape(self, coll):  
         shape = pymunk.Circle(self.body, self.radius)
         shape.color = self.col
-        shape.density = self.density
+        # shape.density = self.density
         shape.friction = self.friction
         shape.elasticity = self.elasticity
         shape.mass = self.mass

@@ -29,30 +29,30 @@ def draw_text(t, screen, font, pos, angle):
     screen.blit(text, text_rect)
 
 
-def get_formation_from_front_line(v1, front_line, u):
+# def get_formation_from_front_line(v1, front_line, u):
 
-    formation = []
-    perp = -front_line.perpendicular_normal()
-    u_size, u_dist = u.soldier_size_dist
-    upr = np.minimum(int((front_line).length / (u_size + u_dist)),u.n//2)
-    alphas = np.linspace(0,1, upr).tolist()[:-1]
+#     formation = []
+#     perp = -front_line.perpendicular_normal()
+#     u_size, u_dist = u.soldier_size_dist
+#     upr = np.minimum(int((front_line).length / (u_size + u_dist)),u.n//2)
+#     alphas = np.linspace(0,1, upr).tolist()[:-1]
     
-    if len(alphas) > 0:
-        n_rows_with_additional = u.n - len(alphas)*(u.n // len(alphas))
+#     if len(alphas) > 0:
+#         n_rows_with_additional = u.n - len(alphas)*(u.n // len(alphas))
         
-    for a in alphas:
-        for r in range(u.n // len(alphas)):
-            pos = Vec2d((v1*(a) + (v1 - front_line)*(1-a) +\
-                         perp * (r * (u_size + u_dist)) ).int_tuple)
-            formation.append(pos)
+#     for a in alphas:
+#         for r in range(u.n // len(alphas)):
+#             pos = Vec2d((v1*(a) + (v1 - front_line)*(1-a) +\
+#                          perp * (r * (u_size + u_dist)) ).int_tuple)
+#             formation.append(pos)
             
-        if n_rows_with_additional > 0:
-            pos = Vec2d((v1*(a) + (v1 - front_line)*(1-a) +\
-                         perp * ((r+1) * (u_size + u_dist)) ).int_tuple)
-            n_rows_with_additional -= 1
-            formation.append(pos)
+#         if n_rows_with_additional > 0:
+#             pos = Vec2d((v1*(a) + (v1 - front_line)*(1-a) +\
+#                          perp * ((r+1) * (u_size + u_dist)) ).int_tuple)
+#             n_rows_with_additional -= 1
+#             formation.append(pos)
 
-    return formation
+#     return formation
     
     
 
@@ -69,7 +69,7 @@ class Army:
         
         # Infantry
         # TODO : select a meaningful value for start ranks (10)
-        formation = get_formation(np.array(pos), angle, 1, units[0], Melee_Unit.start_width*units[0], 5)
+        formation, _  = get_formation(np.array(pos), angle, 1, units[0], Melee_Unit.start_width*units[0], 5)
 
         infantry = []
         for p in formation:
@@ -89,17 +89,16 @@ class Army:
         dd = (start_pos-end_pos).get_length_sqrd()
         
         if  dd < 30**2: # Just one click
-            # total_w = 0
-            # units_pos = Vec2d((0,0))
-            # for u in selected_units:
-            #     total_w += u.width + u.dist
-            #     units_pos += u.pos / len(selected_units)
+            total_w = 0
+            units_pos = Vec2d((0,0))
+            for u in selected_units:
+                total_w += u.width + u.dist
+                units_pos += u.pos / len(selected_units)
         
-            # front_line = (end_pos - units_pos).perpendicular_normal()
+            front_line = (end_pos - units_pos).perpendicular_normal()
             
-            
-            # start_pos = end_pos + front_line * total_w / 2 
-            # end_pos = end_pos - front_line * total_w / 2 
+            start_pos = end_pos + front_line * total_w / 2 
+            end_pos = end_pos - front_line * total_w / 2 
             
             start_pos = Vec2d(start_pos)
             end_pos = Vec2d(end_pos)                
@@ -141,11 +140,14 @@ class Army:
                 n_ranks = int(np.ceil(u.n / upr))
                 angle = front_line.angle
                 
-                formation = get_formation(np.array(list(divs[ci])), angle, 
+                formation, ranks_ind = get_formation(np.array(list(divs[ci])), angle, 
+                                          n_ranks, u.n, size, dist)                
+                form_first, ranks_ind_first = get_formation(np.array(list(u.pos)), angle, 
                                           n_ranks, u.n, size, dist)
                 
                 if send_command:
-                    u.move_at(formation)
+                    u.n_ranks = n_ranks
+                    u.move_at(formation, form_first, ranks_ind)
                 else:
                     for p in formation:
                         self.draw_circle(p, 10//2, RED)

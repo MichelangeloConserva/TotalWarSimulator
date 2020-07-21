@@ -2,8 +2,10 @@ import pymunk
 import pygame
 
 from pymunk.pygame_util import to_pygame
+from pymunk.vec2d import Vec2d
 
 from utils.pymunk_utils import limit_velocity
+
 
 class Person:
     

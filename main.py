@@ -27,6 +27,108 @@ LEFT = 1
 RIGHT = 3
 
 
+DEBUG = True
+
+
+
+
+DIST = 2
+rest_length_intra = DIST + 10
+stifness_intra    = 10
+dumping_intra     = 2
+
+
+# def add_intra_spring(unit):
+#     for j in range(3):
+#         for i in range(10):
+#             u = unit.formation[j][i]
+            
+#             # bot neighbour
+#             if j + 1 < 3:
+#                 n_r = unit.formation[j+1][i]
+#                 spring1 = pymunk.DampedSpring(u.body, n_r.body, Vec2d(), Vec2d(), 
+#                                               rest_length = rest_length_intra, 
+#                                               stiffness = stifness_intra * 10, 
+#                                               damping = dumping_intra / 3)
+#                 space.add(spring1)
+            
+#             # right neighbour
+#             if i + 1 < 10:
+#                 n_r = unit.formation[j][i+1]
+#                 spring1 = pymunk.DampedSpring(u.body, n_r.body, Vec2d(), Vec2d(), 
+#                                               rest_length = rest_length_intra, 
+#                                               stiffness = stifness_intra , 
+#                                               damping = dumping_intra)
+#                 space.add(spring1)
+
+
+def spring_to_mantain(s, pos, space):
+    pos_static_body = pymunk.Body(body_type = pymunk.Body.STATIC)
+    pos_static_body.position = pos
+    
+    spring1 = pymunk.DampedSpring(s.body, pos_static_body, Vec2d(), Vec2d(), 
+                                  rest_length = 0, 
+                                  stiffness = 15, 
+                                  damping = 1)        
+    space.add(spring1)    
+
+
+def begin_solve_ally(arbiter, sapce, _):
+    # s1 starts the collision
+    s1, s2 = arbiter.shapes
+    
+    # if  not s1.sensor and not s2.sensor:
+    #     spring_to_mantain(s1, s2.body.position)
+    #     spring_to_mantain(s2, s2.body.position)
+    
+    # if not s1.sensor and not s2.sensor: return False
+    # if s1.sensor and not s2.sensor:
+    #     print("entering")
+    #     s1.body.soldier.col = GREEN
+    # elif s2.sensor and not s1.sensor:
+    #     print("entering")
+    
+    return True
+
+def separate_solve_ally(arbiter, sapce, _):
+    # s1 starts the collision
+    s1, s2 = arbiter.shapes
+    
+    # if  not s1.sensor and not s2.sensor:
+    #     spring_to_mantain(s1, s2.body.position)
+    #     spring_to_mantain(s2, s2.body.position)
+    
+    # if s1.sensor and not s2.sensor:
+    #     print("exting")
+    #     s1.body.soldier.col = RED
+    # elif s2.sensor and not s1.sensor:
+    #     print("exting")
+    
+    return True
+
+def begin_solve_enemy(arbiter, sapce, _):
+    # s1 starts the collision
+    s1, s2 = arbiter.shapes
+    
+    # if  not s1.sensor and not s2.sensor:
+    #     spring_to_mantain(s1, s2.body.position, s1.body.soldier.game.space)
+    #     spring_to_mantain(s2, s2.body.position, s1.body.soldier.game.space)
+    
+    return True
+
+def separate_solve_enemy(arbiter, sapce, _):
+    # s1 starts the collision
+    s1, s2 = arbiter.shapes
+    
+    # if  not s1.sensor and not s2.sensor:
+    #     spring_to_mantain(s1, s2.body.position, s1.body.soldier.game.space)
+    #     spring_to_mantain(s2, s2.body.position, s1.body.soldier.game.space)
+    
+    return True
+
+
+
+
 class Game:
     
     def __init__(self, u_att = (2,0,0), u_def = (1,0,0), record = True):
@@ -38,13 +140,37 @@ class Game:
         self.record = record
     
         pygame.init()
+        self.font = pygame.font.Font(pygame.font.get_default_font(), 15)
         
-        self.font = pygame.font.Font(pygame.font.get_default_font(), 8)
+        
         
         self.space = create_space(WIDTH, HEIGHT)
+
+        CH_22 = self.space.add_collision_handler(2, 2)
+        CH_11 = self.space.add_collision_handler(1, 1)        
+        CH_12 = self.space.add_collision_handler(2, 1)        
+        
+        CH_22.begin = begin_solve_ally
+        CH_11.begin = begin_solve_ally
+        CH_22.separate = separate_solve_ally
+        CH_11.separate = separate_solve_ally
+        
+        CH_12.begin = begin_solve_enemy
+        
+        
         self.screen = pygame.display.set_mode((WIDTH,HEIGHT)) 
         self.clock = pygame.time.Clock()
         self.initiate_armies(u_att, u_def)
+        
+        
+        
+        if DEBUG:
+            from pymunk.pygame_util import DrawOptions
+            self.draw_options = DrawOptions(self.screen)
+
+
+        
+        
     
     
     def update(self, dt):
@@ -172,6 +298,9 @@ class Game:
             
         
             self.update(1/self.fps)
+            
+            if DEBUG: self.space.debug_draw(self.draw_options)
+            
             self.draw()
             
             pygame.display.flip()
