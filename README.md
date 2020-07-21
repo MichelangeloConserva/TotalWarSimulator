@@ -17,7 +17,5 @@ State of the project:
 - [ ] Cavalry
 - [ ] Refactor and add comments
 
-(The violet colour means that the soldier is subject to physics)
-
 ![](test.gif)
 
