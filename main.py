@@ -213,12 +213,15 @@ class Game:
                 arr = pygame.surfarray.array3d(self.screen).swapaxes(1, 0)
                 self.video.append(arr.astype(np.uint8))
         
-    def save_video(self): imageio.mimwrite('test.gif', self.video , fps = self.fps)
+    def save_video(self): 
+        from pygifsicle import optimize
+        imageio.mimwrite('test.gif', self.video , fps = self.fps)
+        optimize("test.gif")
 
 
 
 if __name__ == "__main__":
-    game = Game(record = False)
+    game = Game(record = True)
     game.run()
     
     if False:

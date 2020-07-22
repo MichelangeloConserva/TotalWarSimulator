@@ -333,9 +333,9 @@ class Melee_Unit:
         is_moving = False
         for i,s in enumerate(self.soldiers):
             
+            if s.order is None: continue
             if len(ds) == 0:
-                if s.order is None: continue
-                else: d = (s.body.position-s.order).length
+                d = (s.body.position-s.order).length
             else: d = ds[i]
                 
             
