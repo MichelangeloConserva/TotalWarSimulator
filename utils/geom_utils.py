@@ -6,6 +6,13 @@ from pymunk.vec2d import Vec2d
 from scipy.spatial.transform import Rotation as R
 
 
+def kill_lateral_velocity(b):
+    b.angular_velocity = 0.
+    lat_dir = b.local_to_world(Vec2d(1,0)) - b.position
+    lat_vel = lat_dir.dot(b.velocity) * lat_dir
+    imp = b.mass * -lat_vel
+    b.apply_force_at_world_point(imp, b.position)
+
 def rotate_matrix(M, angle): 
     assert type(M) == np.ndarray and M.shape[1] == 3, "M must be a np.array of Nx3"
     return R.from_euler('z', angle).apply(M)[:,:-1]

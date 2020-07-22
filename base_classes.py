@@ -29,6 +29,7 @@ class Person:
         self.bot_nn = None
         self.left_nn = None
         self.right_nn = None
+        self.target_soldier = None
     
     def set_dest(self, pos): self.order = pos
     

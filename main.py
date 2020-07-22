@@ -1,6 +1,5 @@
 import numpy as np
 import imageio
-
 import pygame
 
 from pymunk.pygame_util import to_pygame, from_pygame, DrawOptions
@@ -11,7 +10,7 @@ from armies import Army
 from utils.pymunk_utils import create_space
 from utils.geom_utils import do_polygons_intersect
 from utils.collisions_utils import begin_solve_ally, begin_solve_enemy, separate_solve_ally
-
+from utils.enums import Role
 
 WIDTH, HEIGHT = 1200, 800
 UNIT_SIZE = 10
@@ -21,12 +20,12 @@ GHOST_RED = (255, 0, 0, 100)
 DARKGREEN = pygame.color.THECOLORS["darkgreen"]
 LEFT = 1
 RIGHT = 3
-DEBUG = True
+DEBUG = False
 
 
 class Game:
     
-    def __init__(self, u_att = (3,0,0), u_def = (1,0,0), record = True):
+    def __init__(self, u_att = (1,0,0), u_def = (1,0,0), record = True):
 
         self.objects = []
         self.video = []
@@ -76,7 +75,7 @@ class Game:
         self.attacker = Army(self, (WIDTH/2, 4*HEIGHT/6), WIDTH, HEIGHT, 
                               units = u_att)
         self.defender = Army(self, (WIDTH/2, HEIGHT/6), WIDTH, HEIGHT, 
-                              units = u_def, role = "Defender")
+                              units = u_def, role = Role.DEFENDER)
         self.attacker.enemy, self.defender.enemy = self.defender, self.attacker
         self.armies = [self.attacker, self.defender]
         
@@ -134,6 +133,7 @@ class Game:
                 self.attack_command = False
                 return
             
+            # The formation command is sent
             start_pos = self.start_pos_rmb
             end_pos = Vec2d(from_pygame(event.pos, self.screen))
             if len(self.selected_units) != 0:
@@ -143,7 +143,7 @@ class Game:
             self.drag_rmb = False    
     
     
-    def draw(self):
+    def draw(self, DEBUG):
         if self.drag_rmb:
             start_pos = self.start_pos_rmb
             end_pos = Vec2d(from_pygame(pygame.mouse.get_pos(), self.screen))
@@ -161,7 +161,7 @@ class Game:
                 pygame.draw.polygon(self.screen, RED,  point_list, 3)    
 
         # Drawing all the units
-        for a in self.armies: a.draw()
+        for a in self.armies: a.draw(DEBUG)
     
     
     def run(self):
@@ -188,7 +188,7 @@ class Game:
             self.update(1/self.fps)
             
             if DEBUG: self.space.debug_draw(self.draw_options)
-            self.draw()
+            self.draw(DEBUG)
             
             
             fps = self.font.render(str(int(self.clock.get_fps())), True, pygame.Color('black'))
@@ -203,7 +203,6 @@ class Game:
                 self.video.append(arr.astype(np.uint8))
         
     def save_video(self): imageio.mimwrite('test.gif', self.video , fps = self.fps)
-
 
 
 
