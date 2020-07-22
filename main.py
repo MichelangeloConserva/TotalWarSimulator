@@ -9,7 +9,8 @@ from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_q, MOUSEBUTTONDOWN, MOUSEBU
 from armies import Army
 from utils.pymunk_utils import create_space
 from utils.geom_utils import do_polygons_intersect
-from utils.collisions_utils import begin_solve_ally, begin_solve_enemy, separate_solve_ally
+from utils.collisions_utils import begin_solve_ally, begin_solve_enemy
+from utils.collisions_utils import separate_solve_enemy, separate_solve_ally
 from utils.enums import Role
 
 WIDTH, HEIGHT = 1200, 800
@@ -25,7 +26,7 @@ DEBUG = False
 
 class Game:
     
-    def __init__(self, u_att = (1,0,0), u_def = (1,0,0), record = True):
+    def __init__(self, u_att = (8,0,0), u_def = (8,0,0), record = True):
 
         self.objects = []
         self.video = []
@@ -44,7 +45,7 @@ class Game:
 
     def create_screen(self):
         pygame.init()
-        self.font = pygame.font.Font(pygame.font.get_default_font(), 15)
+        self.font = pygame.font.Font(pygame.font.get_default_font(), 8)
         self.screen = pygame.display.set_mode((WIDTH,HEIGHT)) 
         self.clock = pygame.time.Clock()
         
@@ -63,6 +64,7 @@ class Game:
         
         # Collisions between enemies
         CH_12.begin = begin_solve_enemy
+        CH_12.separate = separate_solve_enemy
     
     
     def update(self, dt):
@@ -72,12 +74,21 @@ class Game:
     
     
     def initiate_armies(self, u_att, u_def):
-        self.attacker = Army(self, (WIDTH/2, 4*HEIGHT/6), WIDTH, HEIGHT, 
+        self.attacker = Army(self, (WIDTH/2, 3*HEIGHT/6), WIDTH, HEIGHT, 
                               units = u_att)
-        self.defender = Army(self, (WIDTH/2, HEIGHT/6), WIDTH, HEIGHT, 
+        self.defender = Army(self, (WIDTH/2, 2*HEIGHT/6), WIDTH, HEIGHT, 
                               units = u_def, role = Role.DEFENDER)
         self.attacker.enemy, self.defender.enemy = self.defender, self.attacker
         self.armies = [self.attacker, self.defender]
+        
+        ### TEST TIME ###
+        for u in self.attacker.units:
+            pos = u.pos
+            enemy = [(e.pos-pos).length for e in self.defender.units]
+            u.target_unit = self.defender.units[np.argmin(enemy)]
+        
+        
+        
         
         
     def on_mouse_down(self, event):

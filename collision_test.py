@@ -1,39 +1,23 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import pymunk
 import pygame
-import math
-import numpy as np
-import math
 
 from pymunk.vec2d import Vec2d
-from scipy.spatial.transform import Rotation as R
-from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_q, MOUSEBUTTONDOWN, MOUSEBUTTONUP, K_SPACE
+from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_q, K_SPACE
 from pymunk.pygame_util import to_pygame, DrawOptions
-from pymunk.vec2d import Vec2d
-
-import pygame
-
-
-from characters import Body
 
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
-
-debug = False
-
 WIDTH, HEIGHT = 500, 300
-
 speed = 50
 max_speed = 150
-
-
 DIST = 2
 rest_length_intra = DIST + 10
 stifness_intra    = 10
 dumping_intra     = 2
 
+debug = True
 
 def draw_text(t, screen, font, pos, angle):
     text = font.render(t, True, BLACK)
@@ -75,8 +59,6 @@ def spring_to_mantain(s,pos):
                                   stiffness = 15, 
                                   damping = 1)        
     space.add(spring1)    
-    
-
 
 
 pygame.init()
@@ -87,15 +69,12 @@ font = pygame.font.Font(None, 30)
 space = pymunk.Space((WIDTH,HEIGHT))
 draw_options = DrawOptions(screen)
 
-
 def limit_velocity(body, gravity, damping, dt):
      pymunk.Body.update_velocity(body, gravity, damping, dt)
      l = body.velocity.length
      if l > max_speed:
          scale = max_speed / l
          body.velocity = body.velocity * scale
-
-
 
 class Soldier:
     def __init__(self, pos, radius, col = BLACK, coll = 1):
@@ -132,19 +111,12 @@ class Soldier:
         
     def draw(self):
         pos = to_pygame(self.body.position,screen)
-        
         pygame.draw.circle(screen, self.col, pos, self.radius-1)
         
-        # draw_text(str(len(self.enemy_in_range)), screen, font, pos, 
-        #           math.degrees(np.pi/2-self.body.angle))
-        
-
-
 
 def begin_solve(arbiter, sapce, _):
     # s1 starts the collision
     s1, s2 = arbiter.shapes
-    
     
     if  not s1.sensor and not s2.sensor:
         s1.body.soldier.col = GREEN
@@ -172,8 +144,6 @@ def separate_solve(arbiter, sapce, _):
     return True
 
 
-
-
 def post_solve(arbiter, sapce, _):
     # s1 starts the collision
     
@@ -185,20 +155,10 @@ def post_solve(arbiter, sapce, _):
     
     return True
 
-# separate
 CH_21 = space.add_collision_handler(2, 1)
 CH_22 = space.add_collision_handler(2, 2)
-
 CH_21.begin = begin_solve
-# CH_22.begin = begin_solve
-
 CH_21.post_solve = post_solve
-
-
-space.add_collision_handler(3, 3).begin = lambda **kargs : False
-
-
-
 
 class Unit:
     def __init__(self, dw = 0, h = HEIGHT/3, col = RED, t_col = 1, rot = np.pi/2):
@@ -223,19 +183,13 @@ class Unit:
         
         if self.attacking and all([u.collided for u in self.units]): 
             self.attacking = False
-            # for u in self.units:
-            #     u.body.velocity = Vec2d(0,0)
         
         if self.attacking:
             for u in self.units:
                 if not u.collided and u.body.velocity.length < 4:
                     u.body.apply_force_at_local_point(Vec2d(speed,np.random.randn()), Vec2d(0,0))
 
-
-
 alls = []
-
-
 
 unit  = Unit()
 unit.attacking = False
@@ -252,16 +206,15 @@ add_intra_spring(unit1)
 add_intra_spring(unit_)
 add_intra_spring(unit1_)
 
-
 alls.append(unit)
 alls.append(unit_)
 alls.append(unit1)
 alls.append(unit1_)
-   
 
-
-
+# video = []
+# record = True
 pause = False
+end = False
 while True:
     screen.fill(pygame.color.THECOLORS["white"])
     fps = font.render(str(int(clock.get_fps())), True, pygame.Color('black'))
@@ -269,31 +222,22 @@ while True:
     
     for event in pygame.event.get():
         
-        if event.type == MOUSEBUTTONDOWN:
-            pass
-            
         if event.type == QUIT or \
             event.type == KEYDOWN and (event.key in [K_ESCAPE, K_q]): 
             pygame.quit()    
-    
+            end = True
         
         if event.type == KEYDOWN:
             if event.key == K_SPACE: pause = not pause
 
-    for u in alls:
-        u.update(1/60.) 
-    
-           
+    if end: break
+
+    for u in alls: u.update(1/60.) 
     
     if debug: space.debug_draw(draw_options)
     else:
         for u in alls:
             for s in u.units: s.draw()
-    
-    
-    
-    
-    
     
     pygame.display.flip()
     
@@ -301,40 +245,13 @@ while True:
         space.step(1/30.)
         clock.tick()
     
+            
+        # if record:
+        #     arr = pygame.surfarray.array3d(screen).swapaxes(1, 0)
+        #     video.append(arr.astype(np.uint8))
 
-
-if False:
-    pygame.quit()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# if record:
+#     import imageio
+#     imageio.mimwrite('test_collision.gif', video , fps = 60)
 
 

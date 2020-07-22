@@ -34,22 +34,55 @@ def separate_solve_ally(arbiter, space, _):
     return True
 
 def begin_solve_enemy(arbiter, space, _):
-    # s1 starts the collision
     s1, s2 = arbiter.shapes
     
-    # if not s1.sensor and not s2.sensor:
-    #     print("impulse")
-    #     f = s1.mass * s1.body.velocity
-    #     s2.body.apply_impulse_at_world_point(f, s2.body.position)
+    if   s1.sensor and not s2.sensor: s1.body.soldier.enemy_melee_range.add(s2)
+    elif s2.sensor and not s1.sensor: s2.body.soldier.enemy_melee_range.add(s1)
     
     return True
 
 def separate_solve_enemy(arbiter, space, _):
-    # s1 starts the collision
     s1, s2 = arbiter.shapes
     
-    # if  not s1.sensor and not s2.sensor:
-    #     spring_to_mantain(s1, s2.body.position, s1.body.soldier.game.space)
-    #     spring_to_mantain(s2, s2.body.position, s1.body.soldier.game.space)
+    if   s1.sensor and not s2.sensor: s1.body.soldier.enemy_melee_range.remove(s2)
+    elif s2.sensor and not s1.sensor: s2.body.soldier.enemy_melee_range.remove(s1)
     
     return True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

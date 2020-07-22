@@ -20,6 +20,7 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 GHOST_RED = (255, 0, 0, 100)
 DARKGREEN = pygame.color.THECOLORS["darkgreen"]
+CYAN = pygame.color.THECOLORS["cyan"]
 
 
 class Army:
@@ -35,7 +36,8 @@ class Army:
         
         # Infantry
         # TODO : select a meaningful value for start ranks (1)
-        formation, _  = get_formation(np.array(pos), angle, 1, units[0], Melee_Unit.start_width, 25)
+        formation, _  = get_formation(np.array(pos), angle, 1, units[0], 
+                                      Melee_Unit.start_width, 15)
 
         infantry = []
         for p in formation:
@@ -82,6 +84,8 @@ class Army:
         diff_vect_all = (start_pos-end_pos)
         if  diff_vect_all.get_length() < 50: # Just one click
             start_pos, end_pos = self.units_formation_at(start_pos, selected_units)
+            diff_vect_all = (start_pos-end_pos)
+
         diff_vect_all = self.v_clipping(diff_vect_all, selected_units)
         
         
@@ -106,7 +110,6 @@ class Army:
             u = units[ri]
             front_line = start_ends[ci][0] - start_ends[ci][1]
             width = front_line.length 
-            
             if width > 5:
                 size, dist = u.soldier_size_dist
                 upr = width / (size+dist)

@@ -12,13 +12,13 @@ class Melee_Soldier(Person):
     
     # density = 1
     friction = 1
-    elasticity = 0.9
+    elasticity = 0.01
     mass = 5
     
-    radius = 10
-    dist = 5
-    # radius = 5
-    # dist =   2.5
+    # radius = 10
+    # dist = 5
+    radius = 2
+    dist =   1
     
     melee_range = 1
     max_speed   = 90
@@ -58,10 +58,10 @@ class Melee_Soldier(Person):
 
     def draw(self):
         pos = to_pygame(self.body.position, self.game.screen)
-        pygame.draw.circle(self.game.screen, self.col, pos, self.radius-1)
+        pygame.draw.circle(self.game.screen, self.col, pos, self.radius)
 
         if self.unit.is_selected:
-            pygame.draw.circle(self.game.screen, BLACK, pos, self.radius-3)
+            pygame.draw.circle(self.game.screen, BLACK, pos, self.radius-1)
 
 
 

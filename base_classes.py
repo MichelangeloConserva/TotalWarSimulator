@@ -24,6 +24,7 @@ class Person:
         game.space.add(self.body, self.shape, self.sensor)
         
         # Variables
+        self.enemy_melee_range = set()
         self.enemy_in_range = set()
         self.front_nn = None
         self.bot_nn = None
