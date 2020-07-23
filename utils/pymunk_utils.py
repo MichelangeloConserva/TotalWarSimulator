@@ -29,15 +29,39 @@ def create_space(WIDTH, HEIGHT):
     shape.friction = 1
     
     return space
+        
+def limit_velocity(body, gravity, damping, dt):
+    pymunk.Body.update_velocity(body, gravity, damping, dt)
+    l = body.velocity.length
+    if l > body.soldier.max_speed:
+        scale = body.soldier.max_speed / l
+        body.velocity = body.velocity * scale
 
 
-def is_in_selection(pos, start_pos, end_pos):
-    return min(start_pos[0], end_pos[0]) < pos[0] and pos[0] < max(start_pos[0], end_pos[0]) and\
-           min(start_pos[1], end_pos[1]) < pos[1] and pos[1] < max(start_pos[1], end_pos[1])\
 
 
-def is_on_enemy_unity(pos, army):
-    for u in army.enemy.units:
-        cc = u.corners
-        if is_in_selection(pos, cc[0], cc[1]): return u
-    return None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

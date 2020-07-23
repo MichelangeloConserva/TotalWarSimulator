@@ -14,12 +14,10 @@ At the current state of the project I am using [pymunk](http://www.pymunk.org) a
 State of the project:
 - [x] Core movement for units
 - [x] Core commands for units
-- [ ] Attack between units
+- [x] Attack between units
 - [ ] Archers
 - [ ] Cavalry
 - [ ] Refactor and add comments
-
-(The violet colour means that the soldier is subject to physics)
 
 ![](test.gif)
 
