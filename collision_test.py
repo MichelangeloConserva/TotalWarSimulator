@@ -29,36 +29,50 @@ def add_intra_spring(unit):
     for j in range(3):
         for i in range(10):
             u = unit.formation[j][i]
+                
+
+            holder = pymunk.Body()
+            holder.position = u.body.position
+            shape = pymunk.Circle(holder, 1)
+            shape.color = BLACK
+            shape.density = 0.01
+            shape.friction = 0.5
+            shape.elasticity = 1
+            shape.mass = 1
+            shape.collision_type = 3                  
             
+            space.add(holder)
+            
+            spring = pymunk.DampedSpring(u.body, holder, Vec2d(), Vec2d(), 
+                                          rest_length = 0, 
+                                          stiffness = u.body.mass * stifness_intra, 
+                                          damping = dumping_intra)   
+            spring.collide_bodies = False     
+            u.holder = holder
+            
+            space.add(spring)
             # bot neighbour
-            if j + 1 < 3:
-                n_r = unit.formation[j+1][i]
-                spring1 = pymunk.DampedSpring(u.body, n_r.body, Vec2d(), Vec2d(), 
-                                              rest_length = rest_length_intra, 
-                                              stiffness = stifness_intra * 10, 
-                                              damping = dumping_intra / 3)
-                space.add(spring1)
+            if j - 1 >= 0:
+                n_r = unit.formation[j-1][i]
+                joint = pymunk.PinJoint(holder, n_r.holder)
+                joint.distance = rest_length_intra  
+                joint.collide_bodies = False
+                space.add(joint)
             
             # right neighbour
-            if i + 1 < 10:
-                n_r = unit.formation[j][i+1]
-                spring1 = pymunk.DampedSpring(u.body, n_r.body, Vec2d(), Vec2d(), 
-                                              rest_length = rest_length_intra, 
-                                              stiffness = stifness_intra , 
-                                              damping = dumping_intra)
-                space.add(spring1)
+            if i - 1 >= 0:
+                n_r = unit.formation[j][i-1]
+                joint = pymunk.PinJoint(holder, n_r.holder)
+                joint.distance = rest_length_intra    
+                joint.collide_bodies = False
+                space.add(joint)
 
 
-def spring_to_mantain(s,pos):
-    # for the attacker
-    pos_static_body = pymunk.Body(body_type = pymunk.Body.STATIC)
-    pos_static_body.position = pos
-    
-    spring1 = pymunk.DampedSpring(s.body, pos_static_body, Vec2d(), Vec2d(), 
-                                  rest_length = 0, 
-                                  stiffness = 15, 
-                                  damping = 1)        
-    space.add(spring1)    
+
+
+
+
+
 
 
 pygame.init()
@@ -110,6 +124,7 @@ class Soldier:
         self.col = col
         
     def draw(self):
+        print(self.body.position)
         pos = to_pygame(self.body.position,screen)
         pygame.draw.circle(screen, self.col, pos, self.radius-1)
         
@@ -121,8 +136,6 @@ def begin_solve(arbiter, sapce, _):
     if  not s1.sensor and not s2.sensor:
         s1.body.soldier.col = GREEN
         
-        spring_to_mantain(s1, s2.body.position)
-        spring_to_mantain(s2, s2.body.position)
     
     elif s1.sensor and not s2.sensor:
         s1.body.soldier.enemy_in_range.add(s2)
@@ -130,6 +143,8 @@ def begin_solve(arbiter, sapce, _):
         s2.body.soldier.enemy_in_range.add(s1)
     
     return True
+
+def begin(arbiter, sapce, _): return False
 
 
 def separate_solve(arbiter, sapce, _):
@@ -159,6 +174,16 @@ CH_21 = space.add_collision_handler(2, 1)
 CH_22 = space.add_collision_handler(2, 2)
 CH_21.begin = begin_solve
 CH_21.post_solve = post_solve
+
+CH_33 = space.add_collision_handler(3, 3)   # Utils
+CH_32 = space.add_collision_handler(3, 2)   # Utils
+CH_31 = space.add_collision_handler(3, 1)   # Utils
+
+CH_33.begin = begin
+CH_32.begin = begin
+CH_31.begin = begin
+
+
 
 class Unit:
     def __init__(self, dw = 0, h = HEIGHT/3, col = RED, t_col = 1, rot = np.pi/2):

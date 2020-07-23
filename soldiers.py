@@ -2,11 +2,14 @@ import pymunk
 import pygame
 
 from pymunk.pygame_util import to_pygame
+from pymunk.vec2d import Vec2d
 
 from base_classes import Person
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+
+stiffness, damping = 5 * 7, 1
 
 class Melee_Soldier(Person):
     
@@ -15,10 +18,10 @@ class Melee_Soldier(Person):
     elasticity = 0.01
     mass = 5
     
-    # radius = 10
-    # dist = 5
-    radius = 2
-    dist =   1
+    radius = 10
+    dist = 5
+    # radius = 2
+    # dist =   1
     
     melee_range = 1
     max_speed   = 90
@@ -30,6 +33,23 @@ class Melee_Soldier(Person):
         Person.__init__(self, game, pos, col, coll)
         
         self.size = 2*self.radius+self.dist
+    
+        body = pymunk.Body()
+        body.position = pos
+        shape = pymunk.Circle(body, 1)
+        shape.density = 0.01
+        shape.friction = 0.5
+        shape.elasticity = 1
+        shape.collision_type = coll
+    
+        joint = pymunk.constraint.DampedSpring(
+            body, self.body, Vec2d(), Vec2d(), 0,  stiffness, damping)
+        joint.collide_bodies = False    
+        
+        self.game.space.add(body, shape, joint)    
+    
+        self.holder = body
+    
     
     def add_body(self, pos):   
         body = pymunk.Body()
@@ -62,40 +82,3 @@ class Melee_Soldier(Person):
 
         if self.unit.is_selected:
             pygame.draw.circle(self.game.screen, BLACK, pos, self.radius-1)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

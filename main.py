@@ -9,11 +9,11 @@ from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_q, MOUSEBUTTONDOWN, MOUSEBU
 from armies import Army
 from utils.pymunk_utils import create_space
 from utils.geom_utils import do_polygons_intersect
-from utils.collisions_utils import begin_solve_ally, begin_solve_enemy
+from utils.collisions_utils import begin_solve_ally, begin_solve_enemy, begin_solve_utils
 from utils.collisions_utils import separate_solve_enemy, separate_solve_ally
 from utils.enums import Role
 
-WIDTH, HEIGHT = 1200, 800
+WIDTH, HEIGHT = 1500, 800
 UNIT_SIZE = 10
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
@@ -26,7 +26,7 @@ DEBUG = False
 
 class Game:
     
-    def __init__(self, u_att = (8,0,0), u_def = (8,0,0), record = True):
+    def __init__(self, u_att = (2,0,0), u_def = (2,0,0), record = True):
 
         self.objects = []
         self.video = []
@@ -52,6 +52,9 @@ class Game:
     def create_space(self):
         self.space = create_space(WIDTH, HEIGHT)
         
+        CH_33 = self.space.add_collision_handler(3, 3)   # Utils
+        CH_32 = self.space.add_collision_handler(3, 2)   # Utils
+        CH_31 = self.space.add_collision_handler(3, 1)   # Utils
         CH_22 = self.space.add_collision_handler(2, 2)
         CH_11 = self.space.add_collision_handler(1, 1)        
         CH_12 = self.space.add_collision_handler(2, 1)        
@@ -65,6 +68,11 @@ class Game:
         # Collisions between enemies
         CH_12.begin = begin_solve_enemy
         CH_12.separate = separate_solve_enemy
+        
+        # Formation schelenton
+        CH_33.begin = begin_solve_utils
+        CH_32.begin = begin_solve_utils
+        CH_31.begin = begin_solve_utils
     
     
     def update(self, dt):
@@ -74,7 +82,7 @@ class Game:
     
     
     def initiate_armies(self, u_att, u_def):
-        self.attacker = Army(self, (WIDTH/2, 3*HEIGHT/6), WIDTH, HEIGHT, 
+        self.attacker = Army(self, (WIDTH/2, 4*HEIGHT/6), WIDTH, HEIGHT, 
                               units = u_att)
         self.defender = Army(self, (WIDTH/2, 2*HEIGHT/6), WIDTH, HEIGHT, 
                               units = u_def, role = Role.DEFENDER)
@@ -221,7 +229,7 @@ class Game:
 
 
 if __name__ == "__main__":
-    game = Game(record = True)
+    game = Game(record = False)
     game.run()
     
     if False:

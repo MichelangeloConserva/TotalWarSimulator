@@ -1,167 +1,162 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import pymunk
 import pygame
 import math
-import numpy as np
-import math
+from PIL import Image
 
 from pymunk.vec2d import Vec2d
-from scipy.spatial.transform import Rotation as R
-from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_q, MOUSEBUTTONDOWN, MOUSEBUTTONUP, K_SPACE
+from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_q, K_SPACE
 from pymunk.pygame_util import to_pygame, DrawOptions
-from pymunk.vec2d import Vec2d
-
-import pygame
-
-
-from characters import Body
 
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
-
-debug = False
-
-WIDTH, HEIGHT = 500, 300
-
-speed = 200
-max_speed = 500
+WIDTH, HEIGHT = 700, 700
 
 
+
+speed = 100 * 10000
+# max_speed = 150
 DIST = 2
 rest_length_intra = DIST + 10
-stifness_intra    = 10
+stifness_intra    = 5
 dumping_intra     = 1
 
-def add_intra_spring(unit):
-    for j in range(3):
-        for i in range(10):
-            u = unit.formation[j][i]
-            
-            # bot neighbour
-            if j + 1 < 3:
-                n_r = unit.formation[j+1][i]
-                spring1 = pymunk.DampedSpring(u.body, n_r.body, Vec2d(), Vec2d(), 
-                                              rest_length = rest_length_intra, 
-                                              stiffness = stifness_intra * 3, 
-                                              damping = dumping_intra)
-                space.add(spring1)
-            
-            # right neighbour
-            if i + 1 < 10:
-                n_r = unit.formation[j][i+1]
-                spring1 = pymunk.DampedSpring(u.body, n_r.body, Vec2d(), Vec2d(), 
-                                              rest_length = rest_length_intra, 
-                                              stiffness = stifness_intra , 
-                                              damping = dumping_intra)
-                space.add(spring1)
-
-
-def spring_to_mantain(s,s1):
-    # for the attacker
-    pos_static_body = pymunk.Body(body_type = pymunk.Body.STATIC)
-    pos_static_body.position = s1.body.position
-    
-    spring1 = pymunk.DampedSpring(s.body, pos_static_body, Vec2d(), Vec2d(), 
-                                  rest_length = 0, 
-                                  stiffness = 15, 
-                                  damping = 1)        
-    space.add(spring1)    
-    
 
 
 
-pygame.init()
-screen = pygame.display.set_mode((WIDTH,HEIGHT)) 
-clock = pygame.time.Clock()
-font = pygame.font.Font(None, 30)
+space = pymunk.Space()
+b0 = space.static_body
 
-space = pymunk.Space((WIDTH,HEIGHT))
-draw_options = DrawOptions(screen)
+fps = 30
+steps = 10
 
-
-def limit_velocity(body, gravity, damping, dt):
-     pymunk.Body.update_velocity(body, gravity, damping, dt)
-     l = body.velocity.length
-     if l > max_speed:
-         scale = max_speed / l
-         body.velocity = body.velocity * scale
+BLACK = (0, 0, 0)
+GRAY = (220, 220, 220)
+WHITE = (255, 255, 255)
 
 
+def begin(arbiter, sapce, _): 
+    print("coo")
+    return False
+CH_33 = space.add_collision_handler(3, 3)   # Utils
+CH_32 = space.add_collision_handler(3, 2)   # Utils
+CH_31 = space.add_collision_handler(3, 1)   # Utils
+CH_33.begin = begin
+CH_32.begin = begin
+CH_31.begin = begin
+
+
+
+class App:
+    def __init__(self):
+        pygame.init()
+        self.clock = pygame.time.Clock()
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        self.draw_options = DrawOptions(self.screen)
+        self.running = True
+        self.gif = 0
+        self.images = []
+
+    def do_event(self, event):
+        if event.type == QUIT:
+            self.running = False
+
+        if event.type == KEYDOWN:
+            if event.key in (K_q, K_ESCAPE):
+                self.running = False
+
+    def draw(self):
+        self.screen.fill(GRAY)
+        space.debug_draw(self.draw_options)
+        pygame.display.update()
+
+        text = f'fpg: {self.clock.get_fps():.1f}'
+        pygame.display.set_caption(text)
+
+
+class Box:
+    def __init__(self, p0=(0, 0), p1=(WIDTH, HEIGHT), d=4):
+        x0, y0 = p0
+        x1, y1 = p1
+        pts = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+        for i in range(4):
+            segment = pymunk.Segment(
+                space.static_body, pts[i], pts[(i+1) % 4], d)
+            segment.elasticity = 1
+            segment.friction = 0.5
+            space.add(segment)
+
+
+class Holder:
+    def __init__(self, pos, radius=5, coll=1):
+        self.body = pymunk.Body()
+        self.body.position = pos
+        shape = pymunk.Circle(self.body, radius)
+        shape.density = 0.01
+        shape.friction = 0.5
+        shape.elasticity = 1
+        shape.collision_type = coll
+        space.add(self.body, shape)
 
 class Soldier:
-    def __init__(self, pos, radius, col = BLACK, coll = 1):
+    def __init__(self, pos, radius, coll = 1, col = BLACK):
+        
+        self.collided = False
+        
+        # Body
         body = pymunk.Body()
         body.position = pos
         body.soldier = self
-        body.velocity_func = limit_velocity
+        
+        # Concrete shape
         shape = pymunk.Circle(body, radius)
-        shape.color = col
+        # shape.color = col
         shape.density = 5
         shape.friction = 1
-        shape.elasticity = 0.01
-        shape.mass = 50
+        shape.elasticity = 0.03
+        # shape.mass = 50
         shape.collision_type = coll
-        space.add(body, shape)
         
-        self.collided = False
+        # Holder
+        self.holder = Holder(pos, 2, 3)
+        DampedSpring(body, self.holder.body, 0, 1000, 100)
+        
+        # Sensor
+        sensor = pymunk.Circle(body, radius * 1)
+        sensor.sensor = True
+        sensor.collision_type = coll
+        
+        space.add(body, shape, sensor)
+        # space.add(body, shape)
+        
+        self.enemy_in_range = set()
         
         self.body = body
         self.pos = pos
         self.radius = radius
         self.col = col
         
-    def draw(self):
-        pygame.draw.circle(screen, self.col, to_pygame(self.body.position, screen), self.radius)
+    # def draw(self):
+    #     pos = to_pygame(self.body.position,screen)
+    #     pygame.draw.circle(screen, self.col, pos, self.radius-1)
 
+class PinJoint:
+    def __init__(self, b, b2, a=(0, 0), a2=(0, 0)):
+        joint = pymunk.constraint.PinJoint(b, b2, a, a2)
+        joint.collide_bodies = False
+        joint.distance = 300
+        space.add(joint)
 
-
-
-def begin_solve(arbiter, sapce, _):
-    # s1 starts the collision
-    
-    s1, s2 = arbiter.shapes
-    s1.body.soldier.col = GREEN
-    
-    spring_to_mantain(s1, s2)
-    spring_to_mantain(s2, s1)
-    
-    return True
-
-
-def post_solve(arbiter, sapce, _):
-    # s1 starts the collision
-    
-    s1, s2 = arbiter.shapes
-    s1.body.soldier.col = GREEN
-    
-    s1.body.soldier.collided = True
-    s2.body.soldier.collided = True
-    
-    return True
-
-# separate
-CH_21 = space.add_collision_handler(2, 1)
-CH_22 = space.add_collision_handler(2, 2)
-
-CH_21.begin = begin_solve
-# CH_22.begin = begin_solve
-
-CH_21.post_solve = post_solve
-
-
-space.add_collision_handler(3, 3).begin = lambda **kargs : False
-
-
-
+class DampedSpring:
+    def __init__(self, b, b2, angle, stiffness, damping):
+        joint = pymunk.constraint.DampedSpring(
+            b, b2, Vec2d(), Vec2d(), 0,  stiffness, damping)
+        joint.collide_bodies = False
+        space.add(joint)
 
 class Unit:
-    
-    @property
-    def position(self): return sum([s.body.position for s in self.units]) / len(self.units)
-    
-    def __init__(self, dw = 0, h = HEIGHT/3, col = RED, t_col = 1, angle = np.pi/2):
+    def __init__(self, dw = 0, h = HEIGHT/3, col = RED, t_col = 1, rot = np.pi/2):
         
         formation = []
         
@@ -169,16 +164,14 @@ class Unit:
         for j in range(3):
             for i in range(10):
                 dest = ((WIDTH/2+dw)+i*(10+DIST), h+j*(10+DIST))
-                c = Soldier(dest, 5, col, t_col)
-                c.body.angle = angle
+                c = Soldier(dest, 5, t_col, col)
+                c.body.angle = rot
                 c.unit = self
                 c.dest = dest
                 units.append(c)
             formation += [units[-10:]]
         
-        self.h = 2*5 + 5/2 + (3-1)/2*(DIST)
         
-        self.angle = angle
         self.formation = formation
         self.units = units
 
@@ -186,8 +179,6 @@ class Unit:
         
         if self.attacking and all([u.collided for u in self.units]): 
             self.attacking = False
-            # for u in self.units:
-            #     u.body.velocity = Vec2d(0,0)
         
         if self.attacking:
             for u in self.units:
@@ -195,115 +186,101 @@ class Unit:
                     u.body.apply_force_at_local_point(Vec2d(speed,np.random.randn()), Vec2d(0,0))
 
 
-
-alls = []
-
-unit  = Unit()
-unit.attacking = False
-
-add_intra_spring(unit)
-
-alls.append(unit)
-
-
-
-for s in unit.units:
-    if len(s.body.constraints) == 2:
-        s.col = GREEN
-
-
-
-
-
-
-
-
-
-pause = False
-while True:
-    screen.fill(pygame.color.THECOLORS["white"])
-    fps = font.render(str(int(clock.get_fps())), True, pygame.Color('black'))
-    screen.blit(fps, (50, 50))
-    
-    for event in pygame.event.get():
-        
-        if event.type == MOUSEBUTTONDOWN:
-            print(pygame.mouse.get_pos())
+def add_intra_spring(unit):
+    for j in range(3):
+        for i in range(10):
+            u = unit.formation[j][i]
             
-            
-            
-            
-            
-            
-            
-        if event.type == QUIT or \
-            event.type == KEYDOWN and (event.key in [K_ESCAPE, K_q]): 
-            pygame.quit()    
-    
-        
-        if event.type == KEYDOWN:
-            if event.key == K_SPACE: pause = not pause
+            holder = u.holder.body
 
-    for u in alls:
-        u.update(1/60.) 
-    
-           
-    
-    if debug: space.debug_draw(draw_options)
-    else:
-        for u in alls:
-            for s in u.units: s.draw()
-    
-    
-    pygame.draw.circle(screen, BLACK, to_pygame(unit.position, screen), 5)
-    
-    head = to_pygame(unit.position+ Vec2d(unit.h,0.).rotated(unit.angle), screen)
-    pygame.draw.circle(screen, BLACK, head, 5)
+            # bot neighbour
+            if j - 1 >= 0:
+                n_r = unit.formation[j-1][i]
+                joint = pymunk.PinJoint(holder, n_r.holder.body)
+                joint.distance = rest_length_intra  
+                joint.collide_bodies = False
+                space.add(joint)
+            
+            # right neighbour
+            if i - 1 >= 0:
+                n_r = unit.formation[j][i-1]
+                joint = pymunk.PinJoint(holder, n_r.holder.body)
+                joint.distance = rest_length_intra    
+                joint.collide_bodies = False
+                space.add(joint)
 
 
 
+if __name__ == '__main__':
+    Box()
+
+    # p = Vec2d(450, 450)
+    # v = Vec2d(80, 0)
+    
+    # c1 = Soldier(p+2*v, 20, 2)
+    # c = c1.holder
+    
+    # c3 = Soldier(p-2*v, 20, 2)
+    # c2 = c3.holder
+    
+    # v = v.perpendicular()
+    
+    # c5 = Soldier(p-2*v, 20, 2)
+    # c4 = c5.holder
+    
+    # c7 = Soldier(p+2*v, 20, 2)
+    # c6 = c7.holder
     
     
-    pygame.display.flip()
+    # PinJoint(c.body, c2.body)
+    # PinJoint(c2.body, c4.body)
+    # PinJoint(c4.body, c6.body)
+    # PinJoint(c6.body, c.body)
     
-    if not pause:
-        space.step(1/30.)
-        clock.tick(30)
+    # PinJoint(c.body, c4.body)
+    # PinJoint(c2.body, c6.body)
     
+    
+    alls = []
+
+    unit  = Unit()
+    unit.attacking = False
+    unit_  = Unit(dw = -128)
+    unit_.attacking = False
+    
+    unit1 = Unit(h = 2*HEIGHT/3, col = BLACK, t_col = 2, rot = -np.pi/2)
+    unit1.attacking = True
+    unit1_ = Unit(dw = -128, h = 2*HEIGHT/3, col = BLACK, t_col = 2, rot = -np.pi/2)
+    unit1_.attacking = True
+    
+    add_intra_spring(unit)
+    add_intra_spring(unit1)
+    add_intra_spring(unit_)
+    add_intra_spring(unit1_)
+    
+    alls.append(unit)
+    alls.append(unit_)
+    alls.append(unit1)
+    alls.append(unit1_)
+
+    
+    
+    
+    # c.body.apply_impulse_at_local_point((100, 0))
+    
+    app = App()
+    
+    while app.running:
+        for event in pygame.event.get():
+            app.do_event(event)
+
+        app.draw()
+        app.clock.tick(fps)
 
 
-if False:
+        for i in range(steps):
+            for u in alls: u.update(1/60.) 
+            space.step(1/fps/steps)
+
     pygame.quit()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

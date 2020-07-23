@@ -19,9 +19,9 @@ from utils.geom_utils import kill_lateral_velocity
 RED = (255, 0, 0)
 FORCE_MULTIPLIER         = 10
 dumping_intra            = 5
-damping_def              = 1
+damping_def              = 0.5
 stifness_intra           = FORCE_MULTIPLIER * 55
-stifness_def             = FORCE_MULTIPLIER * 15
+stifness_def             = FORCE_MULTIPLIER * 5
 LATERAL_NOISE_MULTIPLIER = FORCE_MULTIPLIER
 ATTACKING_MULTIPLIERS    = 0.5
 TIME_TO_DEF = 1 # seconds
@@ -49,6 +49,7 @@ class Melee_Unit:
     dist = 5
     start_width = (start_n//start_ranks)*soldier.radius*2 + (start_n//start_ranks-1) * soldier.dist        
     rest_length_intra = soldier.radius*2 + soldier.dist
+    aggressive_charge = True    
     
     @property
     def soldier_size_dist(self): return self.soldier.radius*2, self.soldier.dist
@@ -129,7 +130,9 @@ class Melee_Unit:
         for i in range(len(row_ind)):
             d = Vec2d(formation[i].tolist())
             
-            if set_physically:  self.soldiers[col_ind[i]].body.position = d
+            if set_physically:  
+                self.soldiers[col_ind[i]].body.position = d
+                self.soldiers[col_ind[i]].holder.position = d
             
             # Each soldiers knows its destination and is in a particular rank
             self.soldiers[col_ind[i]].set_dest(d)
@@ -169,7 +172,6 @@ class Melee_Unit:
         if n_ranks     is None: n_ranks     = self.n_ranks
         
         
-        
         # Checking if the unit formation must be rotated
         looking_dir = Vec2d(1,0).rotated(final_angle)
         invert = looking_dir.dot(diff_p) < 0
@@ -183,33 +185,65 @@ class Melee_Unit:
         final_formation, ranks_ind = get_formation(np.array(list(final_pos)), final_angle, n_ranks, 
                                      self.n, size, dist)
         self.move_at(final_formation, changed_formation, ranks_ind, remove_tu = remove_tu)
-        
-    
+
+
     def right_nn_spring(self, s, n_r):
-        spring1 = pymunk.DampedSpring(s.body, n_r.body, Vec2d(), Vec2d(), 
-                                      rest_length = self.rest_length_intra, 
-                                      stiffness = s.body.mass * stifness_intra, 
-                                      damping = dumping_intra)
-        self.game.space.add(spring1)
-        self.intra_springs.append(spring1)
         
         # Linking neighbours
         s.right_nn = n_r
         n_r.left_nn = s        
+
+        holder = n_r.holder
+        joint = pymunk.PinJoint(holder, s.holder)
+        joint.distance = self.rest_length_intra
+        joint.collide_bodies = False
+        self.game.space.add(joint)
+        self.intra_springs.append(joint)        
+    
+        if not n_r.front_nn is None:
+            holder = n_r.front_nn.holder
+            joint = pymunk.PinJoint(holder, s.holder)
+            joint.distance = (self.rest_length_intra**2+self.rest_length_intra**2)**0.5
+            joint.collide_bodies = False
+            self.game.space.add(joint)
+            self.intra_springs.append(joint)      
+            
+        if not s.front_nn is None:
+            holder = s.front_nn.holder
+            joint = pymunk.PinJoint(holder, n_r.holder)
+            joint.distance = (self.rest_length_intra**2+self.rest_length_intra**2)**0.5
+            joint.collide_bodies = False
+            self.game.space.add(joint)
+            self.intra_springs.append(joint)                
+        
         
     def bot_nn_spring(self, s, n_r):
-        spring1 = pymunk.DampedSpring(s.body, n_r.body, Vec2d(), Vec2d(), 
-                                      rest_length = self.rest_length_intra, 
-                                      stiffness = s.body.mass * stifness_intra , 
-                                      damping = dumping_intra)
-        self.game.space.add(spring1)
-        self.intra_springs.append(spring1)
-        
         # Linking neighbours
         s.bot_nn = n_r
-        n_r.front_nn = s             
+        n_r.front_nn = s     
+        
+        holder = n_r.holder
+        joint = pymunk.PinJoint(holder, s.holder)
+        joint.distance = self.rest_length_intra
+        joint.collide_bodies = False
+        self.game.space.add(joint)
+        self.intra_springs.append(joint)  
 
+
+    def add_defensive_springs(self):
+        b0 = self.game.space.static_body
+        for s in self.soldiers:
+            spring = pymunk.DampedSpring(s.body, b0, Vec2d(), s.order, 
+                                          rest_length = 0, 
+                                          stiffness = s.body.mass * stifness_def, 
+                                          damping = damping_def)        
+            spring.collide_bodies = False
+            self.game.space.add(spring)    
+            self.def_springs.append((spring))
+            
+            
     def add_intra_springs_dest(self):
+        
         ranks = self.ranks
         k = 0
         for i in range(len(ranks)-1):
@@ -232,17 +266,6 @@ class Melee_Unit:
             front_nn = np.argmin([(s.body.position-o.body.position).length for o in ranks[-2]])
             self.bot_nn_spring(ranks[-2][front_nn], s) # N.B. order inverted
 
-    def add_defensive_springs(self):
-        
-        b0 = self.game.space.static_body
-        for s in self.soldiers:
-            
-            spring = pymunk.DampedSpring(s.body, b0, Vec2d(), s.order, 
-                                          rest_length = 0, 
-                                          stiffness = s.body.mass * stifness_def, 
-                                          damping = damping_def)        
-            self.game.space.add(spring)    
-            self.def_springs.append((spring))
 
     def attack(self):
         
@@ -253,18 +276,28 @@ class Melee_Unit:
                 if s.target_soldier is None: continue
                 s.set_dest(s.target_soldier.body.position)
             
-            # The rest of the soldiers follows
-            for i in range(1, len(self.ranks)):
-                for s in self.ranks[i]:
-                    s.set_dest(None)
-                    s.target_soldier = None
-                
+            if self.aggressive_charge:
+                ### AGGRESSIVE CHARGE ###
+                # The rest of the soldiers follows
+                for i in range(1, len(self.ranks)):
+                    for s in self.ranks[i]:
+                        s.set_dest(s.front_nn.body.position)
+                        s.target_soldier = s.front_nn                        
+            else:
+                ### DEFENSIVE CHARGE ###
+                # The rest of the soldiers doesnt follow                
+                for i in list(range(1, len(self.ranks)))[::-1]:
+                    for s in self.ranks[i]:
+                        if s.target_soldier is None: continue
+                        s.set_dest(s.front_nn.target_soldier.body.position)
+                        # s.set_dest(s.body.position + s.body.world_to_local(Vec2d(1,0)))
+                        s.target_soldier = None
+
             return
         
-        
-        
-        
-                            
+        # enemy_border_units = self.target_unit.border_units
+        # enemy_pos = np.array([list(s.body.position) for s in enemy_border_units])
+        # frontline_pos = np.array([list(s.body.position) for s in self.ranks[0]])
         
         # TODO : this code is not very efficient
         enemy_border_units = self.target_unit.border_units
@@ -329,6 +362,8 @@ class Melee_Unit:
             self.attack()
     
     
+        is_fighting = self.is_fighting
+    
         # Moving the soldiers
         is_moving = False
         for i,s in enumerate(self.soldiers):
@@ -366,7 +401,10 @@ class Melee_Unit:
                 s.body.angular_velocity = 0.
             else:
                 kill_lateral_velocity(s.body)
-                f = speed * s.mass * FORCE_MULTIPLIER
+                
+                f = speed * s.mass * FORCE_MULTIPLIER 
+                if is_fighting: f = f * ATTACKING_MULTIPLIERS
+                
                 noise = np.random.randn() * s.mass * LATERAL_NOISE_MULTIPLIER
                 s.body.apply_force_at_local_point(Vec2d(f,noise), Vec2d(0,0))
                 
@@ -380,16 +418,16 @@ class Melee_Unit:
         for s in self.soldiers: s.draw()
 
 
-        if not self.target_unit is None:
+        # if not self.target_unit is None:
             
-            for s in self.soldiers:
+        #     for s in self.soldiers:
                 
-                if s.target_soldier is None: continue
+        #         if s.target_soldier is None: continue
                 
-                p1 = to_pygame(s.body.position, self.game.screen)
-                p2 = to_pygame(s.target_soldier.body.position, self.game.screen)
+        #         p1 = to_pygame(s.body.position, self.game.screen)
+        #         p2 = to_pygame(s.target_soldier.body.position, self.game.screen)
         
-                pygame.draw.aalines(self.game.screen, RED, False, [p1,p2]) 
+        #         pygame.draw.aalines(self.game.screen, RED, False, [p1,p2]) 
 
 
 
@@ -421,46 +459,4 @@ class Melee_Unit:
         #     draw_text(str(1), sel
         
 
-        if self.army.role == Role.DEFENDER: return        
-
-        if not self.target_unit is None:
-            
-            for s in self.soldiers:
-                
-                if s.target_soldier is None: continue
-                
-                p1 = to_pygame(s.body.position, self.game.screen)
-                p2 = to_pygame(s.target_soldier.body.position, self.game.screen)
-        
-                pygame.draw.aalines(self.game.screen, RED, False, [p1,p2])        
     
-     
-        
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-        

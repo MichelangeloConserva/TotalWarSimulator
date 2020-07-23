@@ -149,14 +149,3 @@ class Army:
     def draw(self, DEBUG): 
         for u in self.units: u.draw(DEBUG)
 
-
-
-
-
-
-
-
-
-
-
-
