@@ -58,8 +58,8 @@ class Melee_Unit:
         for s in self.soldiers:
             if len(s.enemy_melee_range)>0: 
                 self._is_fighting = True
-                if self.target_unit is None:
-                    self._target_unit = list(s.enemy_melee_range)[0].unit
+                # if self.target_unit is None:
+                #     self._target_unit = list(s.enemy_melee_range)[0].unit
                     # self.target_unit = list(s.enemy_melee_range)[0].unit
                 return True
         # if self._is_fighting and self.order is None:
@@ -142,7 +142,7 @@ class Melee_Unit:
             # Each soldiers knows its destination and is in a particular rank
             s.set_dest(d)
             self.ranks[ranks_ind[i]].append(s)      
-            s.coord = (ranks_ind[i], i)
+            s.coord = list((ranks_ind[i], len(self.ranks[ranks_ind[i]])-1))
         
     def move_at(self, formation, formation_first, ranks_ind, remove_tu = True):
         # self.before_order = self.soldiers_pos.copy()
@@ -322,13 +322,8 @@ class Melee_Unit:
         enemy_border_units = self.target_unit.soldiers
         enemy_pos = np.array([list(s.body.position) for s in enemy_border_units])
         frontline_pos = np.array([list(s.body.position) for s in self.ranks[0]])
-        try:
-            pd = pairwise_distances(frontline_pos, enemy_pos)
-            row_ind, col_ind = linear_sum_assignment(pd)
-        except:
-            print("Frontline\n", frontline_pos)
-            print("ENEMY\n", enemy_pos)
-            raise ValueError()
+        pd = pairwise_distances(frontline_pos, enemy_pos)
+        row_ind, col_ind = linear_sum_assignment(pd)
         
         
         # Our frontline attack the nearest enemy border soldiers
@@ -341,10 +336,13 @@ class Melee_Unit:
         
         # The rest of the soldiers follows
         for i in range(1, len(self.ranks)):
-            for s in self.ranks[i]:
-                s.set_dest(s.front_nn.body.position)
-                s.target_soldier = s.front_nn
-
+            for j,s in enumerate(self.ranks[i]):
+                try:
+                    s.set_dest(s.front_nn.body.position)
+                    s.target_soldier = s.front_nn
+                except:
+                    print(i,j)
+                    raise ValueError()
     
     def defensive_stance_check(self):
         
@@ -364,65 +362,66 @@ class Melee_Unit:
 
     def update(self, dt):
         
-        # for s in self.soldiers:
-        #     if s.is_alive:
-        #         assert not np.isnan(s.body.position[0]), s.health
-
-
-
 
         # self.defensive_stance_check()
         
         
-        
-        # changed = False
-        # for s in self.soldiers:
-        #     if not s.is_alive:
+        changed = False
+        for s in self.soldiers:
+            if not s.is_alive:
                 
-        #         # Saving links
-        #         holder = s.holder
-        #         left_nn, right_nn = s.left_nn, s.right_nn
-        #         bot_nn = s.bot_nn
-        #         coord = s.coord
+                # Saving links
+                holder = s.holder
+                left_nn, right_nn = s.left_nn, s.right_nn
+                bot_nn = s.bot_nn
+                coord = s.coord
                 
-        #         # Removing dead
-        #         s.dies()
-        #         self.soldiers.remove(s)
+                # Removing dead
+                s.dies()
+                self.soldiers.remove(s)
                 
                 
-        #         if bot_nn is None:
-        #             if not s.left_nn is None: s.left_nn.right_nn = s.right_nn
-        #             else:
-        #                 print("THIS NOW")
-        #             if not s.right_nn is None: s.right_nn.left_nn = s.left_nn
-        #             else:
-        #                 print("THIS NOW")
+                if bot_nn is None:
+                    if not s.left_nn is None: s.left_nn.right_nn = s.right_nn
+                    else:
+                        print("THIS NOW")
+                    if not s.right_nn is None: s.right_nn.left_nn = s.left_nn
+                    else:
+                        print("THIS NOW")
                     
-        #         else:
-        #             while not bot_nn is None:
-        #                 # Updating links
-        #                 print(coord, len(self.ranks), len(self.ranks[0]))
-        #                 self.ranks[coord[0]][coord[1]] = s
-        #                 bot_nn.coord, coord = coord, bot_nn.coord
+                else:
+                    while not bot_nn is None:
                         
-        #                 old_r_nn, old_l_nn = bot_nn.right_nn, bot_nn.left_nn
-        #                 bot_nn.right_nn, bot_nn.left_nn = left_nn, right_nn
-        #                 bot_nn.holder, holder = holder, bot_nn.holder
-        #                 self.game.space.remove(bot_nn.spring)
-        #                 bot_nn.attach_to_holder()
+                        # Updating links
+                        self.ranks[coord[0]][coord[1]] = bot_nn
+                        bot_nn.coord, coord = coord, bot_nn.coord
                         
-        #                 bot_nn = bot_nn.bot_nn
+                        old_r_nn, old_l_nn = bot_nn.right_nn, bot_nn.left_nn
+                        bot_nn.right_nn, bot_nn.left_nn = left_nn, right_nn
+                        bot_nn.holder, holder = holder, bot_nn.holder
+                        self.game.space.remove(bot_nn.spring)
+                        bot_nn.attach_to_holder()
+                        
+                        bot_nn = bot_nn.bot_nn
 
-        #             if not old_r_nn is None: old_r_nn.left_nn = None
-        #             if not old_l_nn is None: old_l_nn.right_nn = None
-        #             self.ranks[coord[0]][coord[1]] = None
+                    if not old_r_nn is None: old_r_nn.left_nn = None
+                    if not old_l_nn is None: old_l_nn.right_nn = None
+                    
+                    self.ranks[coord[0]].remove(self.ranks[coord[0]][coord[1]])
+                    
+                    for s in self.ranks[coord[0]]:
+                        if s.coord[1] > coord[1]:
+                            s.coord[1] -= 1
 
 
-        #         self.game.space.remove(holder.constraints)
-        #         self.game.space.remove(holder.shapes)
-        #         self.game.space.remove(holder)
+
+
+
+                self.game.space.remove(holder.constraints)
+                self.game.space.remove(holder.shapes)
+                self.game.space.remove(holder)
                 
-        #         changed = True
+                changed = True
                 
                 
                 
@@ -452,7 +451,6 @@ class Melee_Unit:
         # Moving the soldiers
         is_moving = False
         for i,s in enumerate(self.soldiers):
-            if not s.is_alive: continue
 
             if s.order is None: continue
             if len(ds) == 0:
@@ -498,13 +496,11 @@ class Melee_Unit:
         
         # Not in use at the moment
         for s in self.soldiers:
-            if not s.is_alive: continue 
             s.update(dt)
                 
     
     def draw(self, DEBUG):
         for s in self.soldiers: 
-            if not s.is_alive: continue 
             s.draw()
 
 
@@ -526,9 +522,8 @@ class Melee_Unit:
 
 
         ## HEALTH ###
-        for s in self.soldiers:
-            if not s.is_alive or np.isnan(s.body.position[0]): continue 
-            draw_text(str(round(s.health,1)), self.game.screen, self.game.font, s.body.position, 0)            
+        # for s in self.soldiers:
+        #     draw_text(str(round(s.health,1)), self.game.screen, self.game.font, s.body.position, 0)            
 
         ### RANKS ###
         # for i,r in enumerate(self.ranks):

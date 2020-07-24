@@ -6,7 +6,7 @@ import numpy as np
 from pymunk.pygame_util import to_pygame
 from pymunk.vec2d import Vec2d
 
-from base_classes import Person
+from base_classe_soldier import Person
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -22,8 +22,8 @@ class Melee_Soldier(Person):
     
     # radius = 10
     # dist = 5
-    radius = 7
-    dist = 4
+    radius = 5
+    dist = 3
     # radius = 2
     # dist =   1
     
@@ -91,7 +91,6 @@ class Melee_Soldier(Person):
         return sensor
 
     def update(self, dt):
-        self.holder.position = self.body.position
         
         ### MELEE FIGHTING ###
         r = [random.random() for _ in range(len(self.enemy_melee_range))]
@@ -103,7 +102,6 @@ class Melee_Soldier(Person):
 
 
     def draw(self):
-        if not self.is_alive or np.isnan(self.body.position[0]): return 
         
         pos = to_pygame(self.body.position, self.game.screen)
         pygame.draw.circle(self.game.screen, self.col, pos, self.radius)

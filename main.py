@@ -21,13 +21,13 @@ GHOST_RED = (255, 0, 0, 100)
 DARKGREEN = pygame.color.THECOLORS["darkgreen"]
 LEFT = 1
 RIGHT = 3
-DEBUG = True
+DEBUG = False
 
 space_damping = 0.9
 
 class Game:
     
-    def __init__(self, u_att = (1,0,0), u_def = (1,0,0), record = True):
+    def __init__(self, u_att = (5,0,0), u_def = (3,0,0), record = True):
 
         self.objects = []
         self.video = []
@@ -93,10 +93,10 @@ class Game:
         self.armies = [self.attacker, self.defender]
         
         ### TEST TIME ###
-        for u in self.attacker.units:
-            pos = u.pos
-            enemy = [(e.pos-pos).length for e in self.defender.units]
-            u.target_unit = self.defender.units[np.argmin(enemy)]
+        # for u in self.attacker.units:
+        #     pos = u.pos
+        #     enemy = [(e.pos-pos).length for e in self.defender.units]
+        #     u.target_unit = self.defender.units[np.argmin(enemy)]
         
         
         
@@ -227,14 +227,12 @@ class Game:
         
     def save_video(self): 
         from pygifsicle import optimize
-        imageio.mimwrite('test.gif', self.video , fps = self.fps)
-        optimize("test.gif")
+        imageio.mimwrite('test_.gif', self.video , fps = self.fps)
+        optimize("test_.gif")
 
 
 
 if __name__ == "__main__":
-    game = Game(record = False)
+    game = Game(record = True)
     game.run()
     
-    if False:
-        pygame.quit()

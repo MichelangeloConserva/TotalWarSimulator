@@ -10,4 +10,6 @@ class UnitType(Enum):
     ARCHERS = 2
     CAVALRY = 3
 
+class Coll(Enum):
+    UTILS = 3
 

@@ -6,6 +6,7 @@ from .geom_utils import rotate_matrix, spaced_vector
 # from geom_utils import rotate_matrix, spaced_vector
 
 def get_formation(pos, angle, n_ranks, n, size, dist):
+    
     formation = []
     rank_ind = {}
 
