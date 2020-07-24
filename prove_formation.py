@@ -13,8 +13,6 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 WIDTH, HEIGHT = 700, 700
 
-
-
 speed = 100 * 10000
 # max_speed = 150
 DIST = 2
@@ -34,6 +32,8 @@ steps = 10
 BLACK = (0, 0, 0)
 GRAY = (220, 220, 220)
 WHITE = (255, 255, 255)
+
+joints = []
 
 
 def begin(arbiter, sapce, _): 
@@ -200,6 +200,7 @@ def add_intra_spring(unit):
                 joint.distance = rest_length_intra  
                 joint.collide_bodies = False
                 space.add(joint)
+                joints.append(joint)
             
             # right neighbour
             if i - 1 >= 0:
@@ -208,8 +209,10 @@ def add_intra_spring(unit):
                 joint.distance = rest_length_intra    
                 joint.collide_bodies = False
                 space.add(joint)
+                joints.append(joint)
 
 
+from time import time
 
 if __name__ == '__main__':
     Box()
@@ -269,13 +272,17 @@ if __name__ == '__main__':
     # c.body.apply_impulse_at_local_point((100, 0))
     
     app = App()
-    
+    start = time()
     while app.running:
         for event in pygame.event.get():
             app.do_event(event)
 
         app.draw()
         app.clock.tick(fps)
+
+        if time()-start > 5:
+            space.remove(*joints)
+
 
 
         for i in range(steps):

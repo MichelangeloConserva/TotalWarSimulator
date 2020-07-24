@@ -21,12 +21,13 @@ GHOST_RED = (255, 0, 0, 100)
 DARKGREEN = pygame.color.THECOLORS["darkgreen"]
 LEFT = 1
 RIGHT = 3
-DEBUG = False
+DEBUG = True
 
+space_damping = 0.9
 
 class Game:
     
-    def __init__(self, u_att = (2,0,0), u_def = (2,0,0), record = True):
+    def __init__(self, u_att = (1,0,0), u_def = (1,0,0), record = True):
 
         self.objects = []
         self.video = []
@@ -51,6 +52,8 @@ class Game:
         
     def create_space(self):
         self.space = create_space(WIDTH, HEIGHT)
+        self.space.damping = space_damping
+        
         
         CH_33 = self.space.add_collision_handler(3, 3)   # Utils
         CH_32 = self.space.add_collision_handler(3, 2)   # Utils
@@ -94,8 +97,6 @@ class Game:
             pos = u.pos
             enemy = [(e.pos-pos).length for e in self.defender.units]
             u.target_unit = self.defender.units[np.argmin(enemy)]
-        
-        
         
         
         
@@ -204,7 +205,10 @@ class Game:
                 elif event.type == MOUSEBUTTONUP:   self.on_mouse_up(event)
         
             
+        
+        
             self.update(1/self.fps)
+            
             
             if DEBUG: self.space.debug_draw(self.draw_options)
             self.draw(DEBUG)
