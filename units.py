@@ -53,6 +53,7 @@ class Melee_Unit:
     def soldiers_pos(self): return [s.body.position for s in self.soldiers]
     @property
     def n(self): return len(self.soldiers)
+    # TODO : investigate what works better for fighting
     @property
     def is_fighting(self):
         for s in self.soldiers:

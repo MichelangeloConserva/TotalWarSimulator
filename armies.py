@@ -51,17 +51,40 @@ class Army:
         self.role = role
     
     def units_formation_at(self, p, selected_units):
+        """
+        Given a position it returns the margin vectors of the position with
+        the rotation angle defined by the direction from the current position to
+        the target position.
+
+        Parameters
+        ----------
+        p : Vec2d
+            The target position of the formation.
+        selected_units : set
+            The set of units that are to be moved.
+
+        Returns
+        -------
+        start_pos : Vec2d
+            The left margin of the new formation.
+        end_pos : Vec2d
+            The right margin of the new formation.
+
+        """
+        
+        # TODO : Add archers and cavalry into the formation
         total_w = 0
         units_pos = Vec2d((0,0))
         for i,u in enumerate(selected_units):
-            total_w += u.width + (u.dist if i != len(selected_units)-1 else 0)
             
-            # I am not sure why but add this is necessary
-            total_w += sum(u.soldier_size_dist)
+            # Summing the width of the units
+            total_w += u.width + (u.dist if i != len(selected_units)-1 else 0)
+            total_w += sum(u.soldier_size_dist) # I am not sure why but add this is necessary
+            
+            # Calculating the average position of the unit before moving
             units_pos += u.pos / len(selected_units)
     
         front_line = (p - units_pos).perpendicular_normal()
-        
         start_pos = p + front_line * total_w / 2
         end_pos = p - front_line * total_w / 2         
         
@@ -73,16 +96,16 @@ class Army:
             max_row_l += u.max_width  + u.dist
             min_row_l += u.min_width  + u.dist
         return vector_clipping(v, min_row_l, max_row_l)
-        
+
     
     # TODO : this only works for infantry
     def move_units_with_formation(self, selected_units, start_pos, end_pos, send_command = False):
         
         if len(selected_units) == 0: return
         
-        # Obtaining the left and right margin of the formation
+        # Obtaining the left and right margin defined by the mouse
         diff_vect_all = (start_pos-end_pos)
-        if  diff_vect_all.get_length() < 50: # Just one click
+        if  diff_vect_all.get_length() < 50: # Just one click so no resize
             start_pos, end_pos = self.units_formation_at(start_pos, selected_units)
             diff_vect_all = (start_pos-end_pos)
 
@@ -125,26 +148,20 @@ class Army:
                     formation, ranks_ind = get_formation(np.array(list(divs[ci])), angle, 
                                                               n_ranks, u.n, size, dist)                          
                     for p in formation:
-                        self.draw_circle(p, 10//2, RED)                
-                
-                
-                
-                
-                
-                
-                
-                
-    
+                        self.draw_circle(p, 10//2, RED)    
+                        
 
-    def draw_circle(self, pos, r, c):    
+    def update(self, dt): 
+        for u in self.units: u.update(dt)
+        
+        
+    # %% Drawing utilities
+    
+    def draw_circle(self, pos, r, c):
         pygame.draw.circle(self.game.screen, c, to_pygame(pos, self.game.screen), r)
     
     def draw_polygon(self, vs, c, w=1):    
         pygame.draw.circle(self.game.screen, c, [to_pygame(v, self.game.screen) for v in vs], w)
-    
-    
-    def update(self, dt): 
-        for u in self.units: u.update(dt)
 
     def draw(self, DEBUG): 
         for u in self.units: u.draw(DEBUG)

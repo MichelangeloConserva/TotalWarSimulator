@@ -22,10 +22,8 @@ def spaced_vector(n, size, dist):
     return np.linspace(-dd/2, dd/2, n)
 
 def vector_clipping(v, min_length, max_length):
-    if v.length > max_length:
-        return v.normalized() * max_length
-    elif v.length < min_length:
-        return v.normalized() * min_length        
+    if v.length > max_length:   return v.normalized() * max_length
+    elif v.length < min_length: return v.normalized() * min_length        
     return v
 
 def vect_linspace(v1, v2, n):
