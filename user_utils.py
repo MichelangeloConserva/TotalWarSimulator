@@ -41,3 +41,26 @@ def gen_replacement_string(match):
 
 with open(ff, 'w') as fp:
   fp.write(re.sub(r'^((?:    )+)', gen_replacement_string, text, flags=re.MULTILINE))
+
+
+# =============================================================================
+# Statistics about files
+# =============================================================================
+
+import re,os
+import pandas as pd
+
+tot = 0
+files_stats = {}
+
+for path, subdirs, files in os.walk("./"):
+  for name in files:
+    if name[-3:] == ".py":
+
+      with open(os.path.join(path, name), "r") as f:
+        lines = f.readlines()
+        tot += len(lines)
+        files_stats[name] = {"NumLines" : len(lines)}
+
+stats = pd.DataFrame(files_stats).T
+
