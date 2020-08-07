@@ -1,44 +1,31 @@
-# =============================================================================
 # Generate class diagram
-# =============================================================================
-
 ! pyreverse -o png .
 
-# =============================================================================
-# Change indentation
-# =============================================================================
+# Black formatiing
+! python -m black ./
 
+# Change indentation (useful after black formatting)
 import re,os
 
 for path, subdirs, files in os.walk("./"):
   for name in files:
-    if name[-3:] == ".py":
-      pass
+    if name[-3:] == ".py" and name != "user_utils.py":
+      with open(os.path.join(path, name)) as fp:
+        text = fp.read()
+      def gen_replacement_string(match):
+        print(match)
+        print(match.groups())
+        return '  '*(len(match.groups()[0])//4)
+      with open(os.path.join(path, name), 'w') as fp:
+        fp.write(re.sub(r'^((?:    )+)', gen_replacement_string, text, flags=re.MULTILINE))
 
-
-with open(os.path.join(path, name)) as fp:
-  text = fp.read()
-
-def gen_replacement_string(match):
-  print(match)
-  print(match.groups())
-  return '  '*(len(match.groups()[0])//4)
-
-with open(os.path.join(path, name), 'w') as fp:
-  fp.write(re.sub(r'^((?:    )+)', gen_replacement_string, text, flags=re.MULTILINE))
-
-
-
+# Change indentation of a single file
 ff = "./main.py"
-
-with open(ff) as fp:
-  text = fp.read()
-
+with open(ff) as fp: text = fp.read()
 def gen_replacement_string(match):
   print(match)
   print(match.groups())
   return '  '*(len(match.groups()[0])//4)
-
 with open(ff, 'w') as fp:
   fp.write(re.sub(r'^((?:    )+)', gen_replacement_string, text, flags=re.MULTILINE))
 
@@ -63,4 +50,3 @@ for path, subdirs, files in os.walk("./"):
         files_stats[name] = {"NumLines" : len(lines)}
 
 stats = pd.DataFrame(files_stats).T
-

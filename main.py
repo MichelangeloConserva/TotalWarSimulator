@@ -14,9 +14,9 @@ from game import Game
 record = False
 DEBUG = True
 
-class Trajectory:
 
-  def __init__(self, screen, n=10, r = 200):
+class Trajectory:
+  def __init__(self, screen, n=10, r=200):
 
     self.screen = screen
 
@@ -24,11 +24,11 @@ class Trajectory:
     self.width = 3
     self.n = n
 
-    center = Vec2d(1500//2, 800//2)
-    self.control_vertex_list = calc_vertices(center, 1500//4, 800//4, np.pi)
+    center = Vec2d(1500 // 2, 800 // 2)
+    self.control_vertex_list = calc_vertices(center, 1500 // 4, 800 // 4, np.pi)
     self.control_vertex_list = [list(v) for v in self.control_vertex_list]
 
-  def make_curve_points(self, connected = False):
+  def make_curve_points(self, connected=False):
     x, y = zip(*self.control_vertex_list)
 
     # closing the trajectory
@@ -37,7 +37,7 @@ class Trajectory:
 
     f, u = interpolate.splprep([x, y], s=0, k=2)
     xint, yint = interpolate.splev(np.linspace(0, 1, 50), f)
-    self.curve_vertex_list = [(x,y) for x,y in zip(xint, yint)]
+    self.curve_vertex_list = [(x, y) for x, y in zip(xint, yint)]
 
   def draw(self):
     for i, vertex in enumerate(self.control_vertex_list):
@@ -48,17 +48,14 @@ class Trajectory:
     # Draw last line from last curve point to last control point
 
 
-
 if __name__ == "__main__":
   game = Game(record)
-  dt = 1/game.fps
-
+  dt = 1 / game.fps
 
   k = 0
   traj = Trajectory(game.screen)
 
   inf = Melee_Unit(game, traj.control_vertex_list[0], np.pi, RED, 1)
-
 
   cur_drag_ind = None
   stop = False
@@ -70,22 +67,21 @@ if __name__ == "__main__":
       if event.type == QUIT or event.type == KEYDOWN and event.key == K_ESCAPE:
         pygame.quit()
         game.done = True
-        if game.record: game.save_video()   # might take some time to run
+        if game.record:
+          game.save_video()  # might take some time to run
 
       if event.type == KEYDOWN and event.key == K_SPACE:
         stop = not stop
-
 
       # Moving the points around
       if event.type == pygame.MOUSEBUTTONDOWN:
         if event.button == 1:
           pos = pygame.mouse.get_pos()
 
-          for i,p in enumerate(traj.control_vertex_list):
-            if (Vec2d(pos)-Vec2d(list(p))).length < 10:
+          for i, p in enumerate(traj.control_vertex_list):
+            if (Vec2d(pos) - Vec2d(list(p))).length < 10:
               cur_drag_ind = i
               break
-
 
       if event.type == pygame.MOUSEBUTTONUP:
         cur_drag_ind = None
@@ -93,30 +89,22 @@ if __name__ == "__main__":
     if not cur_drag_ind is None:
       traj.control_vertex_list[i] = pygame.mouse.get_pos()
 
-
-
-
-
-    if game.done: break
+    if game.done:
+      break
 
     # get_formation(pos, angle, self.n_ranks, self.n, size, dist)
 
-
     if not inf.is_moving:
       inf.move_at_point(traj.control_vertex_list[k])
-      k = (k+1) % len(traj.control_vertex_list)
-
+      k = (k + 1) % len(traj.control_vertex_list)
 
     if not stop:
       inf.update(dt)
       game.update(dt)
 
-
     traj.draw()
     inf.draw(DEBUG)
     game.draw(DEBUG)
-
-
 
     pygame.display.flip()
     game.clock.tick(game.fps)
