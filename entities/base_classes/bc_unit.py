@@ -237,7 +237,7 @@ class Unit:
         d = ds[i]
 
       # Prevent tremors when reached position
-      if d < s.size / 10:
+      if d < s.size / 5:
         s.body.velocity = 0, 0
         s.body.angular_velocity = 0.0
         continue

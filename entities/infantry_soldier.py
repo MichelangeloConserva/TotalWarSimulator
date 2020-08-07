@@ -19,16 +19,16 @@ class Melee_Soldier(Person):
   mass = 5
 
   # BIG VERSION
-  radius = 7
-  dist = 15
+  # radius = 7
+  # dist = 15
 
   # MEDIUM VERSION
   # radius = 5
   # dist = 3
 
   # SMALL VERSION
-  # radius = 2
-  # dist =   1
+  radius = 2
+  dist =   1
 
   melee_range = 1
   max_speed = 90

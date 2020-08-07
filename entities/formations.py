@@ -117,7 +117,7 @@ class BaseFormation:
         s.dies()
         self.unit.soldiers.remove(s)
 
-        self.substitute_dead(s, s.holder, s.coord, *s.nns())
+        self.substitute_dead(s)
         changed = True
 
     return changed
@@ -176,44 +176,54 @@ class SquareFormation(BaseFormation):
       self.ranks[ranks_ind[i]].append(s)
       s.coord = list((ranks_ind[i], len(self.ranks[ranks_ind[i]]) - 1))
 
-  def substitute_dead(self, s, holder, coord, front_nn, right_nn, bot_nn, left_nn):
+  def substitute_dead(self, s):
 
-    if bot_nn is None:
-      if not s.left_nn is None:
-        s.left_nn.right_nn = s.right_nn
-      else:
-        print("THIS NOW")
-      if not s.right_nn is None:
-        s.right_nn.left_nn = s.left_nn
-      else:
-        print("THIS NOW")
+    for s in self.unit.soldiers:
+      if not s.is_alive:
 
-    else:
-      while not bot_nn is None:
+        # Saving links
+        holder = s.holder
+        left_nn, right_nn = s.left_nn, s.right_nn
+        bot_nn = s.bot_nn
+        coord = s.coord
 
-        # Updating links
-        self.ranks[coord[0]][coord[1]] = bot_nn
-        bot_nn.coord, coord = coord, bot_nn.coord
+        # Removing dead
+        s.dies()
+        self.unit.soldiers.remove(s)
 
-        old_r_nn, old_l_nn = bot_nn.right_nn, bot_nn.left_nn
-        bot_nn.right_nn, bot_nn.left_nn = left_nn, right_nn
-        bot_nn.holder, holder = holder, bot_nn.holder
-        self.game.space.remove(bot_nn.spring)
-        bot_nn.attach_to_holder()
 
-        bot_nn = bot_nn.bot_nn
+        if bot_nn is None:
+            if not s.left_nn is None: s.left_nn.right_nn = s.right_nn
+            else:
+                print("THIS NOW")
+            if not s.right_nn is None: s.right_nn.left_nn = s.left_nn
+            else:
+                print("THIS NOW")
 
-        if not old_r_nn is None:
-          old_r_nn.left_nn = None
-        if not old_l_nn is None:
-          old_l_nn.right_nn = None
+        else:
+          while not bot_nn is None:
 
-        self.ranks[coord[0]].remove(self.ranks[coord[0]][coord[1]])
+            # Updating links
+            self.ranks[coord[0]][coord[1]] = bot_nn
+            bot_nn.coord, coord = coord, bot_nn.coord
 
-        for s in self.ranks[coord[0]]:
-          if s.coord[1] > coord[1]:
-            s.coord[1] -= 1
+            old_r_nn, old_l_nn = bot_nn.right_nn, bot_nn.left_nn
+            bot_nn.right_nn, bot_nn.left_nn = left_nn, right_nn
+            bot_nn.holder, holder = holder, bot_nn.holder
+            self.space.remove(bot_nn.spring)
+            bot_nn.attach_to_holder()
 
-      self.game.space.remove(holder.constraints)
-      self.game.space.remove(holder.shapes)
-      self.game.space.remove(holder)
+            bot_nn = bot_nn.bot_nn
+
+          if not old_r_nn is None: old_r_nn.left_nn = None
+          if not old_l_nn is None: old_l_nn.right_nn = None
+
+          self.ranks[coord[0]].remove(self.ranks[coord[0]][coord[1]])
+
+          for s in self.ranks[coord[0]]:
+              if s.coord[1] > coord[1]:
+                  s.coord[1] -= 1
+
+        self.space.remove(holder.constraints)
+        self.space.remove(holder.shapes)
+        self.space.remove(holder)
