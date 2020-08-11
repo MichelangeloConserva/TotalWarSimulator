@@ -95,9 +95,9 @@ class Melee_Soldier(Person):
     #   pygame.draw.circle(self.game.screen, BLACK, pos, self.radius - 1)
     
     # DRAW ARROW TO TARGET
-    p1 = to_pygame(self.body.position, self.game.screen)
-    p2 = to_pygame(self.target_position, self.game.screen)
-    pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
+    # p1 = to_pygame(self.body.position, self.game.screen)
+    # p2 = to_pygame(self.target_position, self.game.screen)
+    # pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
     
     # DRAW VELOCITY
     # p1 = to_pygame(self.body.position, self.game.screen)

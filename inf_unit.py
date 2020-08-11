@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.abspath(".."))
 
 import numpy as np
 import pygame
+import pymunk
 
 from pymunk.vec2d import Vec2d
 from pymunk.pygame_util import to_pygame, from_pygame
@@ -24,11 +25,6 @@ class Melee_Unit(Unit):
   start_n = 100
   start_ranks = 5
   dist = 5
-  start_width = (start_n // start_ranks) * soldier.radius * 2 + (
-    start_n // start_ranks - 1
-  ) * soldier.dist
-  rest_length_intra = soldier.radius * 2 + soldier.dist
-  aggressive_charge = True
 
   FORCE_MULTIPLIER = 10
   dumping_intra = 1
@@ -37,7 +33,7 @@ class Melee_Unit(Unit):
   stifness_def = FORCE_MULTIPLIER * 65 * soldier.mass
   LATERAL_NOISE_MULTIPLIER = FORCE_MULTIPLIER
   ATTACKING_MULTIPLIERS = 0.6
-  melee_range = 50
+  melee_range = soldier.radius * 2 + soldier.dist
   ratio = 4 # This means that we want the number of soldiers in a line be 4 time
             # the number of ranks
 
@@ -69,10 +65,8 @@ class Melee_Unit(Unit):
       s.draw()
     
     # DRAW CONVEX HULL
-    points,hull = self.formation.get_melee_fighting_hull(in_pygame = True)
-    
-    for simplex in hull.simplices:
-      p1 = points[simplex, 0].tolist()
-      p2 = points[simplex, 1].tolist()
+    _, simplices = self.formation.get_melee_fighting_hull(in_pygame = True)
+    for p1,p2 in simplices:
       pygame.draw.line(self.game.screen, (0,0,0), (p1[0],p2[0]), (p1[1],p2[1]))        
-    
+  
+  

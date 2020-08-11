@@ -64,6 +64,7 @@ class Unit:
     self._n = self.start_n
     self.n_ranks = self.start_ranks
     self.angle = angle    
+    self.final_pos = pos    
 
     self.is_selected = False
     self._is_moving = False

@@ -15,7 +15,6 @@ from game import Game
 record = False
 DEBUG = False
 
-
 class Trajectory:
   def __init__(self, screen, n=10, r=200):
 
@@ -57,6 +56,7 @@ if __name__ == "__main__":
   traj = Trajectory(game.screen)
 
   inf = Melee_Unit(game, (300,300), np.pi, RED, 1)
+  inf2 = Melee_Unit(game, traj.control_vertex_list[1], np.pi, BLUE, 1)
 
   cur_drag_ind = None
   start = time()
@@ -100,19 +100,40 @@ if __name__ == "__main__":
     if not inf.is_moving:
       inf.move_at_point(traj.control_vertex_list[k])
       k = (k + 1) % len(traj.control_vertex_list)
-      
+
+
+    # CHECKING COLLISION BETWEEN FIGHTING AREA OF THE UNITS
+    # from utils.pymunk_utils import do_polygons_intersect
     
-    # TESTING RANDOM DEATHS
-    # if time()-start>2:
-    #   start = time()
-    #   np.random.choice(inf.soldiers).health = -1
+    vertices,simplices = inf.formation.get_melee_fighting_hull(False)
+    vertices2,simplices2 = inf2.formation.get_melee_fighting_hull(False)
+    
+    # p = pymunk.Poly(None, vertices)
+    # p.update(pymunk.Transform())
+    
+    # p2 = pymunk.Poly(None, vertices2)
+    # p2.update(pymunk.Transform())
+
+    # len(p.shapes_collide(p2).points) != 0
+    
+    from utils.pymunk_utils import do_polygons_intersect
+    
+    if do_polygons_intersect(vertices, vertices2):
+      stop = True
+    
+    if time()-start>2:
+      start = time()
+      np.random.choice(inf.soldiers).health = -1
+
 
     if not stop:
       inf.update(dt)
+      inf2.update(dt)
       game.update(dt)
 
     game.draw(DEBUG)
     inf.draw(DEBUG)
+    inf2.draw(DEBUG)
     traj.draw()
 
     pygame.display.flip()
@@ -123,20 +144,10 @@ if __name__ == "__main__":
       game.video.append(arr.astype(np.uint8))
 
 
+import matplotlib.pyplot as plt
 
-# from scipy.spatial import ConvexHull, convex_hull_plot_2d
-# import matplotlib.pyplot as plt
+plt.scatter(*np.array(inf.get_soldiers_pos(True)).T)
+plt.scatter(*np.array(vertices).T)
 
-# points = np.array(inf.soldiers_pos)
-# hull = ConvexHull(points)
-
-# plt.plot(points[:,0], points[:,1], 'o')
-# for simplex in hull.simplices:
-#     plt.plot(points[simplex, 0], points[simplex, 1], 'k-')
-
-
-
-
-    
-
-    
+plt.scatter(*np.array(inf2.get_soldiers_pos(True)).T)
+plt.scatter(*np.array(vertices2).T)
