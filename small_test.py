@@ -5,14 +5,15 @@ import pymunk
 from pymunk.vec2d import Vec2d
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_SPACE
 from scipy import interpolate
+from time import time
 
-from entities.infantry_unit import Melee_Unit
+from inf_sold import Melee_Soldier
 from utils.colors import WHITE, BLUE, GREEN, RED
 from utils.pymunk_utils import calc_vertices
 from game import Game
 
 record = False
-DEBUG = False
+DEBUG = True
 
 
 class Trajectory:
@@ -46,7 +47,7 @@ class Trajectory:
     self.make_curve_points(True)
     pygame.draw.lines(self.screen, GREEN, False, self.curve_vertex_list, self.width)
     # Draw last line from last curve point to last control point
-
+    
 
 if __name__ == "__main__":
   game = Game(record)
@@ -55,11 +56,12 @@ if __name__ == "__main__":
   k = 0
   traj = Trajectory(game.screen)
 
-  inf = Melee_Unit(game, traj.control_vertex_list[0], np.pi, RED, 1)
-  inf2 = Melee_Unit(game, traj.control_vertex_list[-1], np.pi, GREEN, 2)
+  s = Melee_Soldier(game, traj.control_vertex_list[0], BLUE, 1)
 
   cur_drag_ind = None
+  start = time()
   stop = False
+  start = time()
   while not game.done:
     game.screen.fill(WHITE)
 
@@ -95,19 +97,24 @@ if __name__ == "__main__":
 
     # get_formation(pos, angle, self.n_ranks, self.n, size, dist)
 
-    if not inf.is_moving and not inf.is_fighting:
-      inf.move_at_point(traj.control_vertex_list[k])
+    if not s.body.velocity.length > 1:
+      s.target_position = traj.control_vertex_list[k]
       k = (k + 1) % len(traj.control_vertex_list)
+      
 
     if not stop:
-      inf.update(dt)
-      inf2.update(dt)
+      
+      s.body.angle = (s.target_position - s.body.position).angle
+      s.move(30,1,1)
+      
+      
+      s.update(dt)
       game.update(dt)
 
-    inf.draw(DEBUG)
-    inf2.draw(DEBUG)
-    traj.draw()
     game.draw(DEBUG)
+    s.draw()
+    traj.draw()
+    
 
     pygame.display.flip()
     game.clock.tick(game.fps)
@@ -115,3 +122,22 @@ if __name__ == "__main__":
     if game.record:
       arr = pygame.surfarray.array3d(game.screen).swapaxes(1, 0)
       game.video.append(arr.astype(np.uint8))
+
+
+
+# from scipy.spatial import ConvexHull, convex_hull_plot_2d
+# import matplotlib.pyplot as plt
+
+# points = np.array(s.soldiers_pos)
+# hull = ConvexHull(points)
+
+# plt.plot(points[:,0], points[:,1], 'o')
+# for simplex in hull.simplices:
+#     plt.plot(points[simplex, 0], points[simplex, 1], 'k-')
+
+
+
+
+    
+
+    

@@ -5,14 +5,15 @@ import pymunk
 from pymunk.vec2d import Vec2d
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_SPACE
 from scipy import interpolate
+from time import time
 
-from entities.infantry_unit import Melee_Unit
+from inf_unit import Melee_Unit
 from utils.colors import WHITE, BLUE, GREEN, RED
 from utils.pymunk_utils import calc_vertices
 from game import Game
 
 record = False
-DEBUG = True
+DEBUG = False
 
 
 class Trajectory:
@@ -46,7 +47,7 @@ class Trajectory:
     self.make_curve_points(True)
     pygame.draw.lines(self.screen, GREEN, False, self.curve_vertex_list, self.width)
     # Draw last line from last curve point to last control point
-
+    
 
 if __name__ == "__main__":
   game = Game(record)
@@ -55,10 +56,12 @@ if __name__ == "__main__":
   k = 0
   traj = Trajectory(game.screen)
 
-  inf = Melee_Unit(game, traj.control_vertex_list[0], np.pi, RED, 1)
+  inf = Melee_Unit(game, (300,300), np.pi, RED, 1)
 
   cur_drag_ind = None
+  start = time()
   stop = False
+  start = time()
   while not game.done:
     game.screen.fill(WHITE)
 
@@ -97,14 +100,20 @@ if __name__ == "__main__":
     if not inf.is_moving:
       inf.move_at_point(traj.control_vertex_list[k])
       k = (k + 1) % len(traj.control_vertex_list)
+      
+      
+    if time()-start>2:
+      start = time()
+      np.random.choice(inf.soldiers).health = -1
+
 
     if not stop:
       inf.update(dt)
       game.update(dt)
 
-    traj.draw()
-    inf.draw(DEBUG)
     game.draw(DEBUG)
+    inf.draw(DEBUG)
+    traj.draw()
 
     pygame.display.flip()
     game.clock.tick(game.fps)
@@ -112,3 +121,22 @@ if __name__ == "__main__":
     if game.record:
       arr = pygame.surfarray.array3d(game.screen).swapaxes(1, 0)
       game.video.append(arr.astype(np.uint8))
+
+
+
+# from scipy.spatial import ConvexHull, convex_hull_plot_2d
+# import matplotlib.pyplot as plt
+
+# points = np.array(inf.soldiers_pos)
+# hull = ConvexHull(points)
+
+# plt.plot(points[:,0], points[:,1], 'o')
+# for simplex in hull.simplices[:1]:
+#     plt.plot(points[simplex, 0], points[simplex, 1], 'k-')
+
+
+
+
+    
+
+    

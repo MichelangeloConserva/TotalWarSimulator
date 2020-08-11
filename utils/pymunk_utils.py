@@ -52,10 +52,19 @@ def limit_velocity(body, gravity, damping, dt):
     scale = body.soldier.max_speed / l
     body.velocity = body.velocity * scale
 
-
 def kill_lateral_velocity(b):
+  # TODO : may be done in a better way
+  
+  # Later velocity
   b.angular_velocity = 0.0
   lat_dir = b.local_to_world(Vec2d(1, 0)) - b.position
+  lat_vel = lat_dir.dot(b.velocity) * lat_dir
+  imp = b.mass * -lat_vel
+  b.apply_force_at_world_point(imp, b.position)
+  
+  # Behind velocity
+  b.angular_velocity = 0.0
+  lat_dir = b.local_to_world(Vec2d(0, 1)) - b.position
   lat_vel = lat_dir.dot(b.velocity) * lat_dir
   imp = b.mass * -lat_vel
   b.apply_force_at_world_point(imp, b.position)
@@ -65,11 +74,9 @@ def rotate_matrix(M, angle):
   assert type(M) == np.ndarray and M.shape[1] == 3, "M must be a np.array of Nx3"
   return R.from_euler("z", angle).apply(M)[:, :-1]
 
-
 def spaced_vector(n, size, dist):
   dd = n * size + (n - 1) * dist - size
   return np.linspace(-dd / 2, dd / 2, n)
-
 
 def calc_vertices(pos, h, w, angle):
   vs = []

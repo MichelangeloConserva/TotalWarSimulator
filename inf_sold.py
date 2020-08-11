@@ -1,5 +1,4 @@
 import sys, os  # Dirty trick to allow sibling imports
-
 sys.path.insert(0, os.path.abspath(".."))
 
 import pymunk
@@ -8,9 +7,8 @@ import random
 
 from pymunk.pygame_util import to_pygame
 
-from .base_classes.bc_person import Person
-from utils.colors import BLACK
-
+from b_soldier import Person
+from utils.colors import BLACK, BLUE
 
 class Melee_Soldier(Person):
 
@@ -20,15 +18,15 @@ class Melee_Soldier(Person):
 
   # BIG VERSION
   # radius = 7
-  # dist = 15
+  # dist = 5
 
   # MEDIUM VERSION
-  # radius = 5
-  # dist = 3
+  radius = 5
+  dist = 3
 
   # SMALL VERSION
-  radius = 2
-  dist =   1
+  # radius = 2
+  # dist =   1
 
   melee_range = 1
   max_speed = 90
@@ -47,12 +45,13 @@ class Melee_Soldier(Person):
   @property
   def is_alive(self):
     return self.health > 0
+  
+  @property
+  def components(self): 
+    return [self.body, self.shape, self.sensor]
 
   def __init__(self, game, pos, col, coll):
     Person.__init__(self, game, pos, col, coll)
-
-    self.add_formation_holder(coll)
-    self.attach_to_holder()
 
     self.health = self.max_health
     self.size = 2 * self.radius + self.dist
@@ -76,7 +75,10 @@ class Melee_Soldier(Person):
     return sensor
 
   def update(self, dt):
-
+    
+    if not self.is_alive:
+      self.dies()
+    
     ### MELEE FIGHTING ###
     r = [random.random() for _ in range(len(self.enemy_melee_range))]
     for i, enemy in enumerate(self.enemy_melee_range):
@@ -89,5 +91,18 @@ class Melee_Soldier(Person):
     pos = to_pygame(self.body.position, self.game.screen)
     pygame.draw.circle(self.game.screen, self.col, pos, self.radius)
 
-    if self.unit.is_selected:
-      pygame.draw.circle(self.game.screen, BLACK, pos, self.radius - 1)
+    # if self.unit.is_selected:
+    #   pygame.draw.circle(self.game.screen, BLACK, pos, self.radius - 1)
+    
+    # DRAW ARROW TO TARGET
+    p1 = to_pygame(self.body.position, self.game.screen)
+    p2 = to_pygame(self.target_position, self.game.screen)
+    pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
+    
+    # DRAW VELOCITY
+    # p1 = to_pygame(self.body.position, self.game.screen)
+    # p2 = to_pygame(self.body.position + self.body.velocity.normalized() * 100, self.game.screen)
+    # pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
+      
+      
+    
