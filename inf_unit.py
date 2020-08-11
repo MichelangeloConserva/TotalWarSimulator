@@ -16,7 +16,8 @@ from inf_sold import Melee_Soldier
 from utils.enums import Role, UnitType
 from formations import SquareFormation
 from concave_hull import concaveHull
-from unit_movement_controller import MovementController
+from unit_controller import UnitController
+
 
 class Melee_Unit(Unit):
 
@@ -34,8 +35,8 @@ class Melee_Unit(Unit):
   LATERAL_NOISE_MULTIPLIER = FORCE_MULTIPLIER
   ATTACKING_MULTIPLIERS = 0.6
   melee_range = soldier.radius * 2 + soldier.dist
-  ratio = 4 # This means that we want the number of soldiers in a line be 4 time
-            # the number of ranks
+  ratio = 4  # This means that we want the number of soldiers in a line be 4 time
+  # the number of ranks
 
   @property
   def formation(self):
@@ -45,28 +46,29 @@ class Melee_Unit(Unit):
 
   def __init__(self, game, pos, angle, col, coll):
     Unit.__init__(self, game, pos, angle, col, coll)
-    self.movement_controller = MovementController(self, self.formation)
+    self.controller = UnitController(self, self.formation)
 
   def move_at_point(self, final_pos, final_angle=None, n_ranks=None, remove_tu=True):
-    self.movement_controller.move_at_point(final_pos, final_angle=None, n_ranks=None, remove_tu=True)
+    self.controller.move_at_point(
+      final_pos, final_angle=None, n_ranks=None, remove_tu=True
+    )
 
   def update(self, dt):
-
     n_deads = 0
     for s in self.soldiers:
       s.update(dt)
-      if not s.is_alive: n_deads += 1
-      
-    self.movement_controller.update(n_deads)
-      
+      if not s.is_alive:
+        n_deads += 1
+
+    self.controller.update(n_deads)
 
   def draw(self, DEBUG):
     for s in self.soldiers:
       s.draw()
-    
+
     # DRAW CONVEX HULL
-    _, simplices = self.formation.get_melee_fighting_hull(in_pygame = True)
-    for p1,p2 in simplices:
-      pygame.draw.line(self.game.screen, (0,0,0), (p1[0],p2[0]), (p1[1],p2[1]))        
-  
-  
+    _, simplices = self.formation.get_melee_fighting_hull(in_pygame=True)
+    for p1, p2 in simplices:
+      pygame.draw.line(
+        self.game.screen, (0, 0, 0), (p1[0], p2[0]), (p1[1], p2[1])
+      )

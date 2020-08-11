@@ -10,7 +10,6 @@ from pymunk.pygame_util import to_pygame, from_pygame
 
 
 class MovementController:
-  
   def __init__(self, unit, formation):
     self.unit = unit
     self.formation = formation
@@ -39,19 +38,16 @@ class MovementController:
     # The formation at the destination
     self.unit.order, self.unit.ranks_ind = dest_formation, ranks_ind
     self.formation.execute_formation(self.unit.order, self.unit.ranks_ind)
-    
+
     self.unit.final_pos = final_pos
     self.unit.angle = final_angle
 
+  def update_formation(self):
+    self.move_at_point(self.unit.final_pos, self.unit.angle)
+    self.formation.execute_formation(self.unit.order, self.unit.ranks_ind)
+    self.steps = 0
 
-  def update(self, n_deads):
-    self.steps += 1
-    
-    if self.steps > 60 or n_deads > 0:
-      self.move_at_point(self.unit.final_pos, self.unit.angle)
-      self.formation.execute_formation(self.unit.order, self.unit.ranks_ind)
-      self.steps = 0
-    
+  def move_soldiers(self):
     ds = [(s.body.position - s.target_position).length for s in self.unit.soldiers]
     max_ds = max(ds)
 
@@ -76,28 +72,9 @@ class MovementController:
 
       s.body.angle = (s.target_position - s.body.position).angle
       s.move(
-        speed,
-        self.unit.FORCE_MULTIPLIER,
-        self.unit.LATERAL_NOISE_MULTIPLIER,
+        speed, self.unit.FORCE_MULTIPLIER, self.unit.LATERAL_NOISE_MULTIPLIER,
       )
 
     # If one soldier is moving the the unit is moving
     if self.unit.is_moving != is_moving:
       self.unit.is_moving = is_moving
-      
-
-
-
-# import math
-# n = 100
-# ratio = 4
-
-# for n in range(1,101)[::-1]:
-  
-#   p,_=self.get_formation(
-#       np.array((0,0)), 0, ), n, size, dist
-#     )
-  
-#   plt.scatter(*p.T)
-#   plt.title(f"{n}, {math.ceil((n / ratio)**0.5)}")
-#   plt.show()

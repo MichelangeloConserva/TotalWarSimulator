@@ -7,6 +7,8 @@ from pymunk.pygame_util import to_pygame, from_pygame
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 
 from utils.pygame_utils import draw_text
+from utils.enums import Role, UnitType, UnitStatus
+
 
 class Unit:
   @property
@@ -21,41 +23,10 @@ class Unit:
   def n(self):
     return len(self.soldiers)
 
-  @property
-  def border_units(self):
-    return [s for s in self.soldiers if s.is_at_border]
-
-  @property
-  def target_unit(self):
-    return self._target_unit
-
-  @target_unit.setter
-  def target_unit(self, tu):
-    self._target_unit = tu
-    if tu is None:
-      return
-    self.move_at_point(tu.pos, remove_tu=False)  # Facing the enemy unit
-
-  @property
-  def is_moving(self):
-    return self._is_moving
-
-  @is_moving.setter
-  def is_moving(self, v):
-    """
-  We set a timer from the moment the unit starts moving as this may be useful.
-  """
-    if not v:
-      self.start_mov_time = pygame.time.get_ticks()
-    self._is_moving = v
-
-  def calc_width(self, upr):
-    return upr * self.soldier.radius * 2 + (upr - 1) * self.soldier.dist
-
-  def get_soldiers_pos(self, vec2d = True):
+  def get_soldiers_pos(self, vec2d=True):
     typ = Vec2d if vec2d else list
     return [typ(s.body.position) for s in self.soldiers]
-  
+
   def __init__(self, game, pos, angle, col, coll):
 
     self.col = col
@@ -63,13 +34,12 @@ class Unit:
     self.game = game
     self._n = self.start_n
     self.n_ranks = self.start_ranks
-    self.angle = angle    
-    self.final_pos = pos    
+    self.angle = angle
+    self.final_pos = pos
 
     self.is_selected = False
-    self._is_moving = False
-    self._is_fighting = False
-    self._target_unit = None
+    self.is_moving = False
+
     self.order = None
     self.before_order = None
 
@@ -89,4 +59,3 @@ class Unit:
       s.unit = self
       soldiers.append(s)
     self.soldiers = soldiers
-    

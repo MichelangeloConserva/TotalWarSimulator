@@ -1,4 +1,5 @@
 import sys, os  # Dirty trick to allow sibling imports
+
 sys.path.insert(0, os.path.abspath(".."))
 
 import pymunk
@@ -9,6 +10,7 @@ from pymunk.pygame_util import to_pygame
 
 from b_soldier import Person
 from utils.colors import BLACK, BLUE
+
 
 class Melee_Soldier(Person):
 
@@ -45,9 +47,9 @@ class Melee_Soldier(Person):
   @property
   def is_alive(self):
     return self.health > 0
-  
+
   @property
-  def components(self): 
+  def components(self):
     return [self.body, self.shape, self.sensor]
 
   def __init__(self, game, pos, col, coll):
@@ -75,10 +77,10 @@ class Melee_Soldier(Person):
     return sensor
 
   def update(self, dt):
-    
+
     if not self.is_alive:
       self.dies()
-    
+
     ### MELEE FIGHTING ###
     r = [random.random() for _ in range(len(self.enemy_melee_range))]
     for i, enemy in enumerate(self.enemy_melee_range):
@@ -93,16 +95,13 @@ class Melee_Soldier(Person):
 
     # if self.unit.is_selected:
     #   pygame.draw.circle(self.game.screen, BLACK, pos, self.radius - 1)
-    
+
     # DRAW ARROW TO TARGET
     # p1 = to_pygame(self.body.position, self.game.screen)
     # p2 = to_pygame(self.target_position, self.game.screen)
     # pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
-    
+
     # DRAW VELOCITY
     # p1 = to_pygame(self.body.position, self.game.screen)
     # p2 = to_pygame(self.body.position + self.body.velocity.normalized() * 100, self.game.screen)
     # pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
-      
-      
-    

@@ -47,7 +47,7 @@ class Trajectory:
     self.make_curve_points(True)
     pygame.draw.lines(self.screen, GREEN, False, self.curve_vertex_list, self.width)
     # Draw last line from last curve point to last control point
-    
+
 
 if __name__ == "__main__":
   game = Game(record)
@@ -56,7 +56,7 @@ if __name__ == "__main__":
   k = 0
   traj = Trajectory(game.screen)
 
-  inf = Melee_Unit(game, (300,300), np.pi, RED, 1)
+  inf = Melee_Unit(game, (300, 300), np.pi, RED, 1)
 
   cur_drag_ind = None
   start = time()
@@ -100,8 +100,7 @@ if __name__ == "__main__":
     if not inf.is_moving:
       inf.move_at_point(traj.control_vertex_list[k])
       k = (k + 1) % len(traj.control_vertex_list)
-      
-    
+
     # TESTING RANDOM DEATHS
     # if time()-start>2:
     #   start = time()
@@ -123,7 +122,6 @@ if __name__ == "__main__":
       game.video.append(arr.astype(np.uint8))
 
 
-
 # from scipy.spatial import ConvexHull, convex_hull_plot_2d
 # import matplotlib.pyplot as plt
 
@@ -133,10 +131,3 @@ if __name__ == "__main__":
 # plt.plot(points[:,0], points[:,1], 'o')
 # for simplex in hull.simplices:
 #     plt.plot(points[simplex, 0], points[simplex, 1], 'k-')
-
-
-
-
-    
-
-    

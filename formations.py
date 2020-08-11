@@ -16,82 +16,55 @@ from utils.pymunk_utils import rotate_matrix, spaced_vector
 
 
 class BaseFormation:
-  
   def __init__(self, unit, melee_range):
     self.melee_range = melee_range
     self.unit = unit
     self.space = unit.game.space
     self.intra_springs = set()
-  
-  def get_melee_fighting_hull(self, in_pygame = False):
-    # points = np.array(self.unit.get_soldiers_pos(False))
-    # center = points.mean(0)
-    # for i in range(len(points)):
-    #   diff = Vec2d(list(points[i] - center))
-    #   l = diff.normalize_return_length()
-    #   # Expanding the convex hull according the the melee range
-    #   # TODO : the expansion can be done in a better way
-    #   # using the center is lame
-    #   p = list( diff*(l+self.melee_range) + Vec2d(list(center)))
-    #   points[i] = to_pygame(p, self.unit.game.screen) if in_pygame else p
-    # hull = ConvexHull(points)
-    # vertices = []
-    # simplices = []
-    # for simplex in hull.simplices:
-    #   # vertices.append(points[simplex,0].tolist())
-    #   vertices.append((points[simplex,0][0],points[simplex,1][0]))
-    #   vertices.append((points[simplex,0][1],points[simplex,1][1]))
-    #   simplices.append((points[simplex,0].tolist(),points[simplex,1].tolist()))
-    # return vertices, simplices
+
+  def get_melee_fighting_hull(self, in_pygame=False):
     points = np.array(self.unit.get_soldiers_pos(False))
     if in_pygame:
       for i in range(len(points)):
-        points[i] = to_pygame(list(points[i]), self.unit.game.screen) 
-    
+        points[i] = to_pygame(list(points[i]), self.unit.game.screen)
     center = points.mean(0)
     hull = ConvexHull(points)
-    
+
     expanded = []
-    # for ind1,ind2 in zip(hull.vertices,hull.vertices[1:]):
-    for ind1,ind2 in zip(hull.vertices,hull.vertices[1:].tolist()+[hull.vertices[0]]):
+    for ind1, ind2 in zip(
+      hull.vertices, hull.vertices[1:].tolist() + [hull.vertices[0]]
+    ):
       v1 = Vec2d(list(points[ind1]))
       v2 = Vec2d(list(points[ind2]))
-    
-      p_norm = (v1-v2).perpendicular_normal() * self.melee_range
-      
+
+      p_norm = (v1 - v2).perpendicular_normal() * self.melee_range
       if (v1 + p_norm - center).length < (v1 - center).length:
         p_norm = -p_norm
-    
       v1 = v1 + p_norm
       v2 = v2 + p_norm
-      
+
       expanded.append(v1)
       expanded.append(v2)
-      
-      
+
     expanded = np.array([list(p) for p in expanded])
-    
+
     hull = ConvexHull(expanded)
     vertices = []
     simplices = []
     for simplex in hull.simplices:
       # vertices.append(points[simplex,0].tolist())
-      vertices.append((expanded[simplex,0][0],expanded[simplex,1][0]))
-      vertices.append((expanded[simplex,0][1],expanded[simplex,1][1]))
-      simplices.append((expanded[simplex,0].tolist(),expanded[simplex,1].tolist()))
+      vertices.append((expanded[simplex, 0][0], expanded[simplex, 1][0]))
+      vertices.append((expanded[simplex, 0][1], expanded[simplex, 1][1]))
+      simplices.append(
+        (expanded[simplex, 0].tolist(), expanded[simplex, 1].tolist())
+      )
     return vertices, simplices
-  
-  
-  
+
   def get_formation(self, *args, **kwargs):
     raise NotImplementedError("get_formation")
 
   def execute_formation(self, *args, **kwargs):
     raise NotImplementedError("execute_formation")
-
-  def substitute_dead(self, *args, **kwargs):
-    raise NotImplementedError("substitute_dead")
-
 
 
 class SquareFormation(BaseFormation):
@@ -100,12 +73,13 @@ class SquareFormation(BaseFormation):
     self.ratio = ratio
 
   def update_n_ranks(self):
-    self.unit.n_ranks = math.ceil((self.unit.n / self.ratio)**0.5)
-
-
+    """
+  When soldiers die we want to maintain the same ratio of the unit between 
+  ranks and columns.
+  """
+    self.unit.n_ranks = math.ceil((self.unit.n / self.ratio) ** 0.5)
 
   def get_formation(self, pos, angle, n_ranks, n, size, dist):
-
     formation = []
     rank_ind = {}
 
@@ -130,12 +104,8 @@ class SquareFormation(BaseFormation):
     self.ranks = [[] for _ in range(max(ranks_ind.values()) + 1)]
 
     pd = pairwise_distances(formation, self.unit.get_soldiers_pos())
-    
-    # if pd.max() > sum(self.unit.soldier_size_dist):
-    #   pd[pd==0] = 100
-    
     row_ind, col_ind = linear_sum_assignment(pd)
-    
+
     for i in range(len(row_ind)):
       d = Vec2d(formation[i].tolist())
       s = self.unit.soldiers[col_ind[i]]
@@ -144,24 +114,28 @@ class SquareFormation(BaseFormation):
       s.target_position = d
       self.ranks[ranks_ind[i]].append(s)
       s.coord = list((ranks_ind[i], len(self.ranks[ranks_ind[i]]) - 1))
-      
+
       if set_physically:
         s.body.position = d
 
 
-
-# import matplotlib.pyplot as plt
-
-# s_pos = np.array(self.unit.get_soldiers_pos(False))
-
-
-# plt.scatter(*s_pos.T)
-# plt.scatter(*formation.T)
-
-# pd = pairwise_distances(formation, self.unit.get_soldiers_pos())
-# row_ind, col_ind = linear_sum_assignment(pd)
-
-# for i in range(len(row_ind)):
-#   d = Vec2d(formation[i].tolist())
-#   s = self.unit.soldiers[col_ind[i]].body.position
-#   plt.plot(*np.vstack((formation[i], list(s))).T)
+## OLD CODE FOR CONVEX HULL ##
+# points = np.array(self.unit.get_soldiers_pos(False))
+# center = points.mean(0)
+# for i in range(len(points)):
+#   diff = Vec2d(list(points[i] - center))
+#   l = diff.normalize_return_length()
+#   # Expanding the convex hull according the the melee range
+#   # TODO : the expansion can be done in a better way
+#   # using the center is lame
+#   p = list( diff*(l+self.melee_range) + Vec2d(list(center)))
+#   points[i] = to_pygame(p, self.unit.game.screen) if in_pygame else p
+# hull = ConvexHull(points)
+# vertices = []
+# simplices = []
+# for simplex in hull.simplices:
+#   # vertices.append(points[simplex,0].tolist())
+#   vertices.append((points[simplex,0][0],points[simplex,1][0]))
+#   vertices.append((points[simplex,0][1],points[simplex,1][1]))
+#   simplices.append((points[simplex,0].tolist(),points[simplex,1].tolist()))
+# return vertices, simplices

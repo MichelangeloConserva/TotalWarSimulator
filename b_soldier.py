@@ -8,8 +8,8 @@ from pymunk.vec2d import Vec2d
 from utils.pymunk_utils import limit_velocity
 from utils.pymunk_utils import kill_lateral_velocity
 
-class Person:
 
+class Person:
   def __init__(self, game, pos, col, coll):
     """
   This is the base class that is used for every soldier, i.e. infantry
@@ -39,10 +39,7 @@ class Person:
     return body
 
   def move(
-    self,
-    speed,
-    FORCE_MULTIPLIER,
-    LATERAL_NOISE_MULTIPLIER,
+    self, speed, FORCE_MULTIPLIER, LATERAL_NOISE_MULTIPLIER,
   ):
 
     kill_lateral_velocity(self.body)
@@ -52,8 +49,9 @@ class Person:
     self.body.apply_force_at_local_point(Vec2d(f, noise), Vec2d(0, 0))
 
   def detach_from_holder(self):
-    if self.spring is None: return
-    
+    if self.spring is None:
+      return
+
     self.game.space.remove(self.spring)
     self.spring = None
 
@@ -62,9 +60,9 @@ class Person:
     for c in self.components:
       self.game.space.remove(c)
 
-# =============================================================================
-# The following functions define the kind of soldier
-# =============================================================================
+  # =============================================================================
+  # The following functions define the kind of soldier
+  # =============================================================================
 
   def add_shape(self, *args, **kwargs):
     raise NotImplementedError("add_shape")
@@ -77,4 +75,3 @@ class Person:
 
   def draw(self, *args, **kwargs):
     raise NotImplementedError("draw")
-

@@ -52,16 +52,17 @@ def limit_velocity(body, gravity, damping, dt):
     scale = body.soldier.max_speed / l
     body.velocity = body.velocity * scale
 
+
 def kill_lateral_velocity(b):
   # TODO : may be done in a better way
-  
+
   # Later velocity
   b.angular_velocity = 0.0
   lat_dir = b.local_to_world(Vec2d(1, 0)) - b.position
   lat_vel = lat_dir.dot(b.velocity) * lat_dir
   imp = b.mass * -lat_vel
   b.apply_force_at_world_point(imp, b.position)
-  
+
   # Behind velocity
   b.angular_velocity = 0.0
   lat_dir = b.local_to_world(Vec2d(0, 1)) - b.position
@@ -74,9 +75,11 @@ def rotate_matrix(M, angle):
   assert type(M) == np.ndarray and M.shape[1] == 3, "M must be a np.array of Nx3"
   return R.from_euler("z", angle).apply(M)[:, :-1]
 
+
 def spaced_vector(n, size, dist):
   dd = n * size + (n - 1) * dist - size
   return np.linspace(-dd / 2, dd / 2, n)
+
 
 def calc_vertices(pos, h, w, angle):
   vs = []
@@ -142,38 +145,47 @@ def do_polygons_intersect(a, b):
   Parameters
   ----------
   a : TYPE
-      list of vertices.
+    list of vertices.
   b : TYPE
-      list of vertices.
+    list of vertices.
   Returns
   -------
   True is intersects False otherwise
-  """    
+  """
 
-  polygons = [a, b];
-  minA, maxA, projected, i, i1, j, minB, maxB = None, None, None, None, None, None, None, None
+  polygons = [a, b]
+  minA, maxA, projected, i, i1, j, minB, maxB = (
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+  )
 
   for i in range(len(polygons)):
 
     # for each polygon, look at each edge of the polygon, and determine if it separates
     # the two shapes
-    polygon = polygons[i];
+    polygon = polygons[i]
     for i1 in range(len(polygon)):
 
       # grab 2 vertices to create an edge
-      i2 = (i1 + 1) % len(polygon);
-      p1 = polygon[i1];
-      p2 = polygon[i2];
+      i2 = (i1 + 1) % len(polygon)
+      p1 = polygon[i1]
+      p2 = polygon[i2]
 
       # find the line perpendicular to this edge
-      normal = { 'x': p2[1] - p1[1], 'y': p1[0] - p2[0] };
+      normal = {"x": p2[1] - p1[1], "y": p1[0] - p2[0]}
 
       minA, maxA = None, None
       # for each vertex in the first shape, project it onto the line perpendicular to the edge
       # and keep track of the min and max of these values
       for j in range(len(a)):
-        projected = normal['x'] * a[j][0] + normal['y'] * a[j][1];
-        if (minA is None) or (projected < minA): 
+        projected = normal["x"] * a[j][0] + normal["y"] * a[j][1]
+        if (minA is None) or (projected < minA):
           minA = projected
 
         if (maxA is None) or (projected > maxA):
@@ -182,8 +194,8 @@ def do_polygons_intersect(a, b):
       # for each vertex in the second shape, project it onto the line perpendicular to the edge
       # and keep track of the min and max of these values
       minB, maxB = None, None
-      for j in range(len(b)): 
-        projected = normal['x'] * b[j][0] + normal['y'] * b[j][1]
+      for j in range(len(b)):
+        projected = normal["x"] * b[j][0] + normal["y"] * b[j][1]
         if (minB is None) or (projected < minB):
           minB = projected
 
@@ -193,5 +205,5 @@ def do_polygons_intersect(a, b):
       # if there is no overlap between the projects, the edge we are looking at separates the two
       # polygons, and we know there is no overlap
       if (maxA < minB) or (maxB < minA):
-          return False;
+        return False
   return True

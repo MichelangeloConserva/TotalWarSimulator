@@ -15,6 +15,7 @@ from game import Game
 record = False
 DEBUG = False
 
+
 class Trajectory:
   def __init__(self, screen, n=10, r=200):
 
@@ -46,7 +47,7 @@ class Trajectory:
     self.make_curve_points(True)
     pygame.draw.lines(self.screen, GREEN, False, self.curve_vertex_list, self.width)
     # Draw last line from last curve point to last control point
-    
+
 
 if __name__ == "__main__":
   game = Game(record)
@@ -55,7 +56,7 @@ if __name__ == "__main__":
   k = 0
   traj = Trajectory(game.screen)
 
-  inf = Melee_Unit(game, (300,300), np.pi, RED, 1)
+  inf = Melee_Unit(game, (300, 300), np.pi, RED, 1)
   inf2 = Melee_Unit(game, traj.control_vertex_list[1], np.pi, BLUE, 1)
 
   cur_drag_ind = None
@@ -101,30 +102,28 @@ if __name__ == "__main__":
       inf.move_at_point(traj.control_vertex_list[k])
       k = (k + 1) % len(traj.control_vertex_list)
 
-
     # CHECKING COLLISION BETWEEN FIGHTING AREA OF THE UNITS
     # from utils.pymunk_utils import do_polygons_intersect
-    
-    vertices,simplices = inf.formation.get_melee_fighting_hull(False)
-    vertices2,simplices2 = inf2.formation.get_melee_fighting_hull(False)
-    
+
+    vertices, simplices = inf.formation.get_melee_fighting_hull(False)
+    vertices2, simplices2 = inf2.formation.get_melee_fighting_hull(False)
+
     # p = pymunk.Poly(None, vertices)
     # p.update(pymunk.Transform())
-    
+
     # p2 = pymunk.Poly(None, vertices2)
     # p2.update(pymunk.Transform())
 
     # len(p.shapes_collide(p2).points) != 0
-    
+
     from utils.pymunk_utils import do_polygons_intersect
-    
+
     if do_polygons_intersect(vertices, vertices2):
       stop = True
-    
-    if time()-start>2:
+
+    if time() - start > 2:
       start = time()
       np.random.choice(inf.soldiers).health = -1
-
 
     if not stop:
       inf.update(dt)

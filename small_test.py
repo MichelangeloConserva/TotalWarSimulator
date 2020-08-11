@@ -47,7 +47,7 @@ class Trajectory:
     self.make_curve_points(True)
     pygame.draw.lines(self.screen, GREEN, False, self.curve_vertex_list, self.width)
     # Draw last line from last curve point to last control point
-    
+
 
 if __name__ == "__main__":
   game = Game(record)
@@ -100,21 +100,18 @@ if __name__ == "__main__":
     if not s.body.velocity.length > 1:
       s.target_position = traj.control_vertex_list[k]
       k = (k + 1) % len(traj.control_vertex_list)
-      
 
     if not stop:
-      
+
       s.body.angle = (s.target_position - s.body.position).angle
-      s.move(30,1,1)
-      
-      
+      s.move(30, 1, 1)
+
       s.update(dt)
       game.update(dt)
 
     game.draw(DEBUG)
     s.draw()
     traj.draw()
-    
 
     pygame.display.flip()
     game.clock.tick(game.fps)
@@ -122,7 +119,6 @@ if __name__ == "__main__":
     if game.record:
       arr = pygame.surfarray.array3d(game.screen).swapaxes(1, 0)
       game.video.append(arr.astype(np.uint8))
-
 
 
 # from scipy.spatial import ConvexHull, convex_hull_plot_2d
@@ -134,10 +130,3 @@ if __name__ == "__main__":
 # plt.plot(points[:,0], points[:,1], 'o')
 # for simplex in hull.simplices:
 #     plt.plot(points[simplex, 0], points[simplex, 1], 'k-')
-
-
-
-
-    
-
-    
