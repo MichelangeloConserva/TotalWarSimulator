@@ -1,6 +1,9 @@
 from unit_movement_controller import MovementController
 from unit_fight_controller import FightController
-from utils.enums import UnitStatus
+from utils.enums import UnitState
+
+FORMATION_UPDATE_EVERY = 30
+
 
 class UnitController:
   def __init__(self, unit, formation):
@@ -9,14 +12,12 @@ class UnitController:
     self.fight_controller = FightController(unit, self)
     
     self.steps = 0
-    self.status = UnitStatus.STAND
 
   def move_at_point(self, final_pos, final_angle=None, n_ranks=None, remove_tu=True):
 
-    if self.status == UnitStatus.FIGHT:
+    if self.unit.state == UnitState.FIGHT:
       print("Order to move while fighting we must do something different")
 
-    self.status = UnitStatus.MOVE
     self.movement_controller.move_at_point(
       final_pos, final_angle=None, n_ranks=None, remove_tu=True
     )
@@ -30,24 +31,22 @@ class UnitController:
     # We want to update the formation every once in a while or after a soldier
     # dies so that everything is perfectly in order    
     self.steps += 1
-    if self.steps > 60 or n_deads > 0:
+    if self.steps > FORMATION_UPDATE_EVERY or n_deads > 0:
       self.update_formation()
 
 
     # Moving the soldier if not fighting
-    if self.status != UnitStatus.FIGHT:
+    if self.unit.state != UnitState.FIGHT:
       self.movement_controller.move_soldiers()
     # Fighting is different
     else:
       self.fight_controller.update()
     
-    # Checking the status
-    if self.status == UnitStatus.MOVE and not self.unit.is_moving:
-      self.status = UnitStatus.STAND
+
 
   def update_formation(self):
     
-    if self.status != UnitStatus.FIGHT:
+    if self.unit.state != UnitState.FIGHT:
       self.movement_controller.update_formation()
     else:
       self.fight_controller.update_formation()

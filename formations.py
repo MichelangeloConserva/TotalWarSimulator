@@ -24,19 +24,18 @@ class BaseFormation:
     self.space = unit.game.space
     self.intra_springs = set()
 
-  def get_hulls(self, in_pygame=False):
+  def get_hulls(self, for_draw = False):
     points = np.array(self.unit.get_soldiers_pos(False))
-    if in_pygame:
+    if for_draw:
       for i in range(len(points)):
         points[i] = to_pygame(list(points[i]), self.unit.game.screen)
     center = points.mean(0)
-    hull = ConvexHull(points)
-
-    inf_hull = Polygon(points[hull.vertices])
+    inf_hull_ = ConvexHull(points)
+    inf_hull = Polygon(points[inf_hull_.vertices])
 
     expanded = []
     for ind1, ind2 in zip(
-      hull.vertices, hull.vertices[1:].tolist() + [hull.vertices[0]]
+      inf_hull_.vertices, inf_hull_.vertices[1:].tolist() + [inf_hull_.vertices[0]]
     ):
       v1 = Vec2d(list(points[ind1]))
       v2 = Vec2d(list(points[ind2]))
@@ -53,15 +52,24 @@ class BaseFormation:
     expanded = np.array([list(p) for p in expanded])
 
     hull = ConvexHull(expanded)
-    vertices = expanded[hull.vertices]
+    fight_hull = Polygon(expanded[hull.vertices])
 
-    # TODO : do as it is done for vertices    
-    simplices = []
+    if not for_draw:  # we only need polygons if we are not drawing
+      return inf_hull, fight_hull
+
+    
+    inf_simplices = []
+    for simplex in inf_hull_.simplices:
+      inf_simplices.append(
+        (points[simplex, 0].tolist(), points[simplex, 1].tolist())
+      )
+    fight_simplices = []
     for simplex in hull.simplices:
-      simplices.append(
+      fight_simplices.append(
         (expanded[simplex, 0].tolist(), expanded[simplex, 1].tolist())
       )
-    return vertices, simplices, inf_hull
+    return inf_simplices, fight_simplices
+
 
   def get_formation(self, *args, **kwargs):
     raise NotImplementedError("get_formation")
@@ -122,11 +130,8 @@ class SquareFormation(BaseFormation):
         s.body.position = d
 
   def formation_info_update(self):
-    self.unit.fight_hull_vertices, self.unit.fight_hull_simplices, self.unit.convex_hull =\
-      self.get_hulls()
+    self.unit.inf_hull, self.unit.fight_hull = self.get_hulls()
     self.unit.pos = self.unit._pos
-
-
 
 
 ## OLD CODE FOR CONVEX HULL ##

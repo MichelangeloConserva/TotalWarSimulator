@@ -9,8 +9,12 @@ from pymunk.pygame_util import to_pygame, from_pygame
 
 
 speed_th_distance = 3
+destination_weight = 0.1
+
+
 
 class MovementController:
+  
   def __init__(self, unit, formation):
     self.unit = unit
     self.formation = formation
@@ -18,35 +22,36 @@ class MovementController:
 
   def move_at_point(self, final_pos, final_angle=None, n_ranks=None, remove_tu=True):
     
+    if type(final_pos)==list:    final_pos = np.array(final_pos)
+    elif type(final_pos)==Vec2d: final_pos = np.array(list(final_pos))
+    
     start_pos = self.unit.pos
-
-    # The vector representing the front line
     diff = start_pos - final_pos
 
-    # TODO : check if the n_ranks has to be changed due to deaths
     # Setting angle and n_ranks to default values if not provided
     if final_angle is None:
       final_angle = diff.perpendicular().angle
     if n_ranks is None:
       self.formation.update_n_ranks()
       n_ranks = self.unit.n_ranks
-
+    
+    self.unit.final_pos = final_pos
+    self.unit.angle = final_angle    
+    
+    final_pos = final_pos*destination_weight + start_pos*(1-destination_weight)
+    
     size, dist = self.unit.soldier_size_dist
-    print("called")
     dest_formation, ranks_ind = self.formation.get_formation(
-      np.array(list(final_pos)), final_angle, n_ranks, self.unit.n, size, dist
+      final_pos, final_angle, n_ranks, self.unit.n, size, dist
     )
 
     # The formation at the destination
-    self.unit.order, self.unit.ranks_ind = dest_formation, ranks_ind
-    self.formation.execute_formation(self.unit.order, self.unit.ranks_ind)
+    self.formation.execute_formation(dest_formation, ranks_ind)
+    self.unit.ranks_ind = ranks_ind
 
-    self.unit.final_pos = final_pos
-    self.unit.angle = final_angle
 
   def update_formation(self):
     self.move_at_point(self.unit.final_pos, self.unit.angle)
-    self.formation.execute_formation(self.unit.order, self.unit.ranks_ind)
     self.steps = 0
 
   def move_soldiers(self):

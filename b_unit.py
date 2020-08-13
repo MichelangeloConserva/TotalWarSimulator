@@ -7,7 +7,7 @@ from pymunk.pygame_util import to_pygame, from_pygame
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 
 from utils.pygame_utils import draw_text
-from utils.enums import Role, UnitType, UnitStatus
+from utils.enums import Role, UnitType, UnitState
 
 
 class Unit:
@@ -39,9 +39,10 @@ class Unit:
 
     self.is_selected = False
     self.is_moving = False
-
     self.order = None
     self.before_order = None
+    self.units_fighting_against = set()
+    self.state = UnitState.STAND
 
     # Adding the soldiers physically
     self.add_soldiers()

@@ -16,7 +16,16 @@ class Coll(Enum):
   UTILS = 3
 
 
-class UnitStatus(Enum):
+class UnitState(Enum):
   STAND = 1
   MOVE = 2
   FIGHT = 3
+
+
+
+
+
+
+
+
+

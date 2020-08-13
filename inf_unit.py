@@ -37,9 +37,6 @@ class Melee_Unit(Unit):
   # the number of ranks
 
   @property
-  def status(self): return self.controller.status
-
-  @property
   def formation(self):
     if not hasattr(self, "_formation"):
       self._formation = SquareFormation(self, self.melee_range, self.ratio)
@@ -71,8 +68,12 @@ class Melee_Unit(Unit):
       s.draw()
 
     # DRAW CONVEX HULL
-    _, simplices,_ = self.formation.get_hulls(in_pygame=True)    
-    for p1, p2 in simplices:
+    inf_simplices, fight_simplices = self.formation.get_hulls(for_draw=True)    
+    for p1, p2 in inf_simplices:
+      pygame.draw.line(
+        self.game.screen, (0, 0, 0), (p1[0], p2[0]), (p1[1], p2[1])
+      )
+    for p1, p2 in fight_simplices:
       pygame.draw.line(
         self.game.screen, (0, 0, 0), (p1[0], p2[0]), (p1[1], p2[1])
       )
