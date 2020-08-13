@@ -175,10 +175,6 @@ if __name__ == "__main__":
         k = (k + 1) % len(traj.control_vertex_list)
 
 
-
-
-
-
     # CHECKING COLLISION BETWEEN FIGHTING AREA OF THE UNITS
     # from utils.pymunk_utils import do_polygons_intersect
 

@@ -7,11 +7,8 @@ import pygame
 from pymunk.vec2d import Vec2d
 from pymunk.pygame_util import to_pygame, from_pygame
 
-
 speed_th_distance = 3
 destination_weight = 0.1
-
-
 
 class MovementController:
   
@@ -48,7 +45,6 @@ class MovementController:
     # The formation at the destination
     self.formation.execute_formation(dest_formation, ranks_ind)
     self.unit.ranks_ind = ranks_ind
-
 
   def update_formation(self):
     self.move_at_point(self.unit.final_pos, self.unit.angle)

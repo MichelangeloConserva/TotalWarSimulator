@@ -95,6 +95,9 @@ if __name__ == "__main__":
     if game.done:
       break
 
+
+    inf.update_info()   # like hulls and position
+
     # get_formation(pos, angle, self.n_ranks, self.n, size, dist)
 
     if not inf.is_moving:

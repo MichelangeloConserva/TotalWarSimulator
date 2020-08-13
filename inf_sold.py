@@ -5,12 +5,13 @@ sys.path.insert(0, os.path.abspath(".."))
 import pymunk
 import pygame
 import random
+import numpy as np
 
 from pymunk.pygame_util import to_pygame
 
 from b_soldier import Person
 from utils.colors import BLACK, BLUE
-
+from utils.pygame_utils import draw_text
 
 class Melee_Soldier(Person):
 
@@ -105,3 +106,9 @@ class Melee_Soldier(Person):
     # p1 = to_pygame(self.body.position, self.game.screen)
     # p2 = to_pygame(self.body.position + self.body.velocity.normalized() * 100, self.game.screen)
     # pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
+
+    draw_text(str(self.coord[1]), self.game.screen, self.game.font, self.body.position,
+              np.pi)
+
+    # self.ranks[ranks_ind[i]].append(s)
+    # s.coord = list((ranks_ind[i], len(self.ranks[ranks_ind[i]]) - 1))

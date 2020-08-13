@@ -28,7 +28,7 @@ class FightController:
         # We want to face the enemy
         unit_pos = self.unit.pos
         other_pos = self.target.pos
-        final_angle = Vec2d(list(other_pos-unit_pos)).perpendicular().angle
+        final_angle = Vec2d(list(unit_pos-other_pos)).perpendicular().angle
         self.controller.movement_controller.move_at_point(
           other_pos, final_angle=final_angle)        
         
