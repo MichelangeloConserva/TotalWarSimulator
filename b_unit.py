@@ -16,7 +16,7 @@ class Unit:
     return self.soldier.radius * 2, self.soldier.dist
 
   @property
-  def pos(self):
+  def _pos(self):
     return sum(self.get_soldiers_pos()) / len(self.soldiers)
 
   @property

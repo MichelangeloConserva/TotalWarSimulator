@@ -11,7 +11,9 @@ from pymunk.pygame_util import to_pygame
 from sklearn.metrics import pairwise_distances
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial import ConvexHull
-
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
+      
 from utils.pymunk_utils import rotate_matrix, spaced_vector
 
 
@@ -22,13 +24,15 @@ class BaseFormation:
     self.space = unit.game.space
     self.intra_springs = set()
 
-  def get_melee_fighting_hull(self, in_pygame=False):
+  def get_hulls(self, in_pygame=False):
     points = np.array(self.unit.get_soldiers_pos(False))
     if in_pygame:
       for i in range(len(points)):
         points[i] = to_pygame(list(points[i]), self.unit.game.screen)
     center = points.mean(0)
     hull = ConvexHull(points)
+
+    inf_hull = Polygon(points[hull.vertices])
 
     expanded = []
     for ind1, ind2 in zip(
@@ -49,16 +53,15 @@ class BaseFormation:
     expanded = np.array([list(p) for p in expanded])
 
     hull = ConvexHull(expanded)
-    vertices = []
+    vertices = expanded[hull.vertices]
+
+    # TODO : do as it is done for vertices    
     simplices = []
     for simplex in hull.simplices:
-      # vertices.append(points[simplex,0].tolist())
-      vertices.append((expanded[simplex, 0][0], expanded[simplex, 1][0]))
-      vertices.append((expanded[simplex, 0][1], expanded[simplex, 1][1]))
       simplices.append(
         (expanded[simplex, 0].tolist(), expanded[simplex, 1].tolist())
       )
-    return vertices, simplices
+    return vertices, simplices, inf_hull
 
   def get_formation(self, *args, **kwargs):
     raise NotImplementedError("get_formation")
@@ -117,6 +120,13 @@ class SquareFormation(BaseFormation):
 
       if set_physically:
         s.body.position = d
+
+  def formation_info_update(self):
+    self.unit.fight_hull_vertices, self.unit.fight_hull_simplices, self.unit.convex_hull =\
+      self.get_hulls()
+    self.unit.pos = self.unit._pos
+
+
 
 
 ## OLD CODE FOR CONVEX HULL ##

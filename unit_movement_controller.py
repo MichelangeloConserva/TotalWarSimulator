@@ -1,5 +1,4 @@
 import sys, os  # Dirty trick to allow sibling imports
-
 sys.path.insert(0, os.path.abspath(".."))
 
 import numpy as np
@@ -9,6 +8,8 @@ from pymunk.vec2d import Vec2d
 from pymunk.pygame_util import to_pygame, from_pygame
 
 
+speed_th_distance = 3
+
 class MovementController:
   def __init__(self, unit, formation):
     self.unit = unit
@@ -16,6 +17,7 @@ class MovementController:
     self.steps = 0
 
   def move_at_point(self, final_pos, final_angle=None, n_ranks=None, remove_tu=True):
+    
     start_pos = self.unit.pos
 
     # The vector representing the front line
@@ -30,7 +32,7 @@ class MovementController:
       n_ranks = self.unit.n_ranks
 
     size, dist = self.unit.soldier_size_dist
-
+    print("called")
     dest_formation, ranks_ind = self.formation.get_formation(
       np.array(list(final_pos)), final_angle, n_ranks, self.unit.n, size, dist
     )
@@ -65,7 +67,7 @@ class MovementController:
 
       if len(s.enemy_melee_range):
         speed = s.base_speed * self.unit.ATTACKING_MULTIPLIERS
-      elif max_ds - d > 5:
+      elif max_ds - d > speed_th_distance:
         speed = s.base_speed * 0.1
       else:
         speed = s.base_speed

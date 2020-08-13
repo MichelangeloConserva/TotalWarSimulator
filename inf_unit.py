@@ -1,5 +1,4 @@
 import sys, os  # Dirty trick to allow sibling imports
-
 sys.path.insert(0, os.path.abspath(".."))
 
 import numpy as np
@@ -15,7 +14,6 @@ from b_unit import Unit
 from inf_sold import Melee_Soldier
 from utils.enums import Role, UnitType
 from formations import SquareFormation
-from concave_hull import concaveHull
 from unit_controller import UnitController
 
 
@@ -39,6 +37,9 @@ class Melee_Unit(Unit):
   # the number of ranks
 
   @property
+  def status(self): return self.controller.status
+
+  @property
   def formation(self):
     if not hasattr(self, "_formation"):
       self._formation = SquareFormation(self, self.melee_range, self.ratio)
@@ -53,13 +54,16 @@ class Melee_Unit(Unit):
       final_pos, final_angle=None, n_ranks=None, remove_tu=True
     )
 
+  def update_info(self):
+    self.formation.formation_info_update()
+
+
   def update(self, dt):
     n_deads = 0
     for s in self.soldiers:
       s.update(dt)
       if not s.is_alive:
         n_deads += 1
-
     self.controller.update(n_deads)
 
   def draw(self, DEBUG):
@@ -67,7 +71,7 @@ class Melee_Unit(Unit):
       s.draw()
 
     # DRAW CONVEX HULL
-    _, simplices = self.formation.get_melee_fighting_hull(in_pygame=True)
+    _, simplices,_ = self.formation.get_hulls(in_pygame=True)    
     for p1, p2 in simplices:
       pygame.draw.line(
         self.game.screen, (0, 0, 0), (p1[0], p2[0]), (p1[1], p2[1])

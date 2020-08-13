@@ -3,6 +3,10 @@ import numpy as np
 
 from pymunk.vec2d import Vec2d
 from scipy.spatial.transform import Rotation as R
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
+
+
 
 # =============================================================================
 # Initialization
@@ -139,71 +143,8 @@ def add_collisions(space):
   CH_31.begin = lambda *args, **kwargs: False
 
 
-def do_polygons_intersect(a, b):
-  """
-  
-  Parameters
-  ----------
-  a : TYPE
-    list of vertices.
-  b : TYPE
-    list of vertices.
-  Returns
-  -------
-  True is intersects False otherwise
-  """
+def do_polygons_intersect(vertices, vertices2):
+  return Polygon(vertices).intersects(Polygon(vertices2))
 
-  polygons = [a, b]
-  minA, maxA, projected, i, i1, j, minB, maxB = (
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-    None,
-  )
-
-  for i in range(len(polygons)):
-
-    # for each polygon, look at each edge of the polygon, and determine if it separates
-    # the two shapes
-    polygon = polygons[i]
-    for i1 in range(len(polygon)):
-
-      # grab 2 vertices to create an edge
-      i2 = (i1 + 1) % len(polygon)
-      p1 = polygon[i1]
-      p2 = polygon[i2]
-
-      # find the line perpendicular to this edge
-      normal = {"x": p2[1] - p1[1], "y": p1[0] - p2[0]}
-
-      minA, maxA = None, None
-      # for each vertex in the first shape, project it onto the line perpendicular to the edge
-      # and keep track of the min and max of these values
-      for j in range(len(a)):
-        projected = normal["x"] * a[j][0] + normal["y"] * a[j][1]
-        if (minA is None) or (projected < minA):
-          minA = projected
-
-        if (maxA is None) or (projected > maxA):
-          maxA = projected
-
-      # for each vertex in the second shape, project it onto the line perpendicular to the edge
-      # and keep track of the min and max of these values
-      minB, maxB = None, None
-      for j in range(len(b)):
-        projected = normal["x"] * b[j][0] + normal["y"] * b[j][1]
-        if (minB is None) or (projected < minB):
-          minB = projected
-
-        if (maxB is None) or (projected > maxB):
-          maxB = projected
-
-      # if there is no overlap between the projects, the edge we are looking at separates the two
-      # polygons, and we know there is no overlap
-      if (maxA < minB) or (maxB < minA):
-        return False
-  return True
+def polygon_min_dist(vertices, vertices2):
+  return Polygon(vertices).distance(Polygon(vertices2))
