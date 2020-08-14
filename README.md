@@ -14,4 +14,4 @@ State of the project:
 ![](movement_test.gif)
 
 ### Fighting
-![](fight_test.gif)
+![](fighting_test.gif)
