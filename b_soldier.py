@@ -39,12 +39,11 @@ class Person:
     return body
 
   def move(
-    self, speed, FORCE_MULTIPLIER, LATERAL_NOISE_MULTIPLIER,
+    self, speed, LATERAL_NOISE_MULTIPLIER,
   ):
 
     kill_lateral_velocity(self.body)
-    f = speed * self.mass * FORCE_MULTIPLIER
-
+    f = speed * self.mass
     noise = np.random.randn() * self.mass * LATERAL_NOISE_MULTIPLIER
     self.body.apply_force_at_local_point(Vec2d(f, noise), Vec2d(0, 0))
 

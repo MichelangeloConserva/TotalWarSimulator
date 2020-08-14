@@ -1,1 +1,1 @@
-space_damping = 0.9
+space_damping = 0.1

@@ -126,6 +126,16 @@ def separate_solve_enemy(arbiter, space, _):
     s2.body.soldier.enemy_melee_range.remove(s1.body.soldier)
   return True
 
+def pre_solve_enemy(arbiter, space, _):
+  # s, s1 = arbiter.shapes
+  # if not s.sensor and not s1.sensor:
+  #   # s.body.apply_force_at_local_point(
+  #   #   -s.body.velocity.projection(s1.body.position-s.body.position), Vec2d(0, 0))
+  #   s1.body.apply_force_at_local_point(
+  #     -s1.body.velocity.projection(s.body.position-s1.body.position), Vec2d(0, 0))
+  return True
+
+
 
 def add_collisions(space):
   CH_33 = space.add_collision_handler(3, 3)  # 3 is the reference value for
@@ -136,6 +146,7 @@ def add_collisions(space):
   # Collisions between soldiers and soldiers' sensors
   CH_12.begin = begin_solve_enemy
   CH_12.separate = separate_solve_enemy
+  CH_12.pre_solve = pre_solve_enemy
 
   # Utility objects should not create collisions
   CH_33.begin = lambda *args, **kwargs: False

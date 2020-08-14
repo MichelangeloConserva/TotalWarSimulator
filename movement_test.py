@@ -12,7 +12,7 @@ from utils.colors import WHITE, BLUE, GREEN, RED
 from utils.pymunk_utils import calc_vertices
 from game import Game
 
-record = False
+record = True
 DEBUG = False
 
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
     game.draw(DEBUG)
     inf.draw(DEBUG)
-    traj.draw()
+    # traj.draw()
 
     pygame.display.flip()
     game.clock.tick(game.fps)

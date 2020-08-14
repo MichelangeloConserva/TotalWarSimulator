@@ -35,9 +35,11 @@ class UnitController:
       self.update_formation()
 
 
+
+    self.movement_controller.move_soldiers()
     # Moving the soldier if not fighting
     if self.unit.state != UnitState.FIGHT:
-      self.movement_controller.move_soldiers()
+      pass
     # Fighting is different
     else:
       self.fight_controller.update()
@@ -49,5 +51,6 @@ class UnitController:
     if self.unit.state != UnitState.FIGHT:
       self.movement_controller.update_formation()
     else:
+      self.movement_controller.update_formation()
       self.fight_controller.update_formation()
 

@@ -64,16 +64,16 @@ class Melee_Unit(Unit):
     self.controller.update(n_deads)
 
   def draw(self, DEBUG):
-    for s in self.soldiers:
-      s.draw()
+    for s in self.soldiers: s.draw(DEBUG)
 
-    # DRAW CONVEX HULL
-    inf_simplices, fight_simplices = self.formation.get_hulls(for_draw=True)    
-    for p1, p2 in inf_simplices:
-      pygame.draw.line(
-        self.game.screen, (0, 0, 0), (p1[0], p2[0]), (p1[1], p2[1])
-      )
-    for p1, p2 in fight_simplices:
-      pygame.draw.line(
-        self.game.screen, (0, 0, 0), (p1[0], p2[0]), (p1[1], p2[1])
-      )
+    if DEBUG:
+      # DRAW CONVEX HULL
+      inf_simplices, fight_simplices = self.formation.get_hulls(for_draw=True)    
+      for p1, p2 in inf_simplices:
+        pygame.draw.line(
+          self.game.screen, (0, 0, 0), (p1[0], p2[0]), (p1[1], p2[1])
+        )
+      for p1, p2 in fight_simplices:
+        pygame.draw.line(
+          self.game.screen, (0, 0, 0), (p1[0], p2[0]), (p1[1], p2[1])
+        )

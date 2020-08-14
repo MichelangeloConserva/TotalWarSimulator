@@ -52,8 +52,8 @@ class Game:
   def draw(self, DEBUG):
 
     # Pymunk debugging draw (constraints and stuff). N.B. Quite slow
-    if DEBUG:
-      self.space.debug_draw(self.draw_options)
+    # if DEBUG:
+    #   self.space.debug_draw(self.draw_options)
 
     # Drawing soldiers
     for a in self.armies:

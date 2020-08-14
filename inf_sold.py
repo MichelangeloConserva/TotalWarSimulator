@@ -15,7 +15,7 @@ from utils.pygame_utils import draw_text
 
 class Melee_Soldier(Person):
 
-  friction = 0.8
+  friction = 1.1
   elasticity = 0.01
   mass = 5
 
@@ -90,25 +90,25 @@ class Melee_Soldier(Person):
       d = enemy.defense * r_
       enemy.health -= max(a - d, 0) * dt
 
-  def draw(self):
+  def draw(self, DEBUG):
     pos = to_pygame(self.body.position, self.game.screen)
     pygame.draw.circle(self.game.screen, self.col, pos, self.radius)
 
-    # if self.unit.is_selected:
-    #   pygame.draw.circle(self.game.screen, BLACK, pos, self.radius - 1)
+    if DEBUG:
+      # if self.unit.is_selected:
+      #   pygame.draw.circle(self.game.screen, BLACK, pos, self.radius - 1)
+  
+      # DRAW ARROW TO TARGET
+      p1 = to_pygame(self.body.position, self.game.screen)
+      p2 = to_pygame(self.target_position, self.game.screen)
+      pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
+  
+      # DRAW VELOCITY
+      # p1 = to_pygame(self.body.position, self.game.screen)
+      # p2 = to_pygame(self.body.position + self.body.velocity.normalized() * 100, self.game.screen)
+      # pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
+  
+      # DRAW COORDINATES 
+      # draw_text(f"{self.coord[0]},{self.coord[1]}", self.game.screen, self.game.font, self.body.position,
+      #           np.pi)
 
-    # DRAW ARROW TO TARGET
-    p1 = to_pygame(self.body.position, self.game.screen)
-    p2 = to_pygame(self.target_position, self.game.screen)
-    pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
-
-    # DRAW VELOCITY
-    # p1 = to_pygame(self.body.position, self.game.screen)
-    # p2 = to_pygame(self.body.position + self.body.velocity.normalized() * 100, self.game.screen)
-    # pygame.draw.aalines(self.game.screen, BLUE, False, [p1,p2])
-
-    draw_text(str(self.coord[1]), self.game.screen, self.game.font, self.body.position,
-              np.pi)
-
-    # self.ranks[ranks_ind[i]].append(s)
-    # s.coord = list((ranks_ind[i], len(self.ranks[ranks_ind[i]]) - 1))

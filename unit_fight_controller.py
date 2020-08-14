@@ -1,6 +1,7 @@
 import numpy as np
 
 from pymunk.vec2d import Vec2d
+from utils.enums import UnitState
 
 from utils.pymunk_utils import do_polygons_intersect,polygon_min_dist
 
@@ -35,17 +36,15 @@ class FightController:
   
   def update(self):
 
-    if not self.target is None:
-      pass
-    else:
-      pass
-        
+      for s in self.unit.soldiers:
+        if len(s.enemy_in_range) != 0: return
 
-# plt.scatter(*unit_vertices.T)
-# plt.scatter(*unit_pos)
-
-# plt.scatter(*other_vertices.T)
-# plt.scatter(*other_pos)
+      if not self.target is None:
+        unit_pos = self.unit.pos
+        other_pos = self.target.pos
+        final_angle = Vec2d(list(unit_pos-other_pos)).perpendicular().angle
+        self.controller.movement_controller.move_at_point(
+          other_pos, final_angle=final_angle)            
 
 
 

@@ -114,7 +114,7 @@ class SquareFormation(BaseFormation):
     # Storing the rank information
     self.ranks = [[] for _ in range(max(ranks_ind.values()) + 1)]
 
-    pd = pairwise_distances(formation, self.unit.get_soldiers_pos())
+    pd = pairwise_distances(formation, self.unit.get_soldiers_pos())**2
     row_ind, col_ind = linear_sum_assignment(pd)
 
     for i in range(len(row_ind)):

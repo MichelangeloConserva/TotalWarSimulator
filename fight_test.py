@@ -17,7 +17,7 @@ from utils.enums import UnitState
 from utils.pymunk_utils import do_polygons_intersect
 
 
-record = False
+record = True
 DEBUG = False
 
 class Trajectory:
@@ -89,6 +89,10 @@ class UnitStateChecker:
           
           u.units_fighting_against.add(o)
           o.units_fighting_against.add(u)
+          
+          if u.controller.fight_controller.target is None: u.controller.fight_controller.target = o
+          if o.controller.fight_controller.target is None: o.controller.fight_controller.target = u
+          
 
       # Checking movement
       if u.state == UnitState.MOVE and not u.is_moving: # The unit has just stopped
@@ -107,15 +111,16 @@ if __name__ == "__main__":
   k = 0
   traj = Trajectory(game.screen)
 
-  inf = Melee_Unit(game, (300, 300), np.pi, RED, 1)
-  inf2 = Melee_Unit(game, traj.control_vertex_list[1], np.pi, BLUE, 1)
+  inf = Melee_Unit(game, (300, 500), np.pi, RED, 1)
+  inf2 = Melee_Unit(game, traj.control_vertex_list[0], np.pi, BLUE, 2)
+  inf3 = Melee_Unit(game, (WIDTH-300, 500), np.pi, RED, 1)
 
-
-  army1 = [inf]
+  army1 = [inf,inf3]
   army2 = [inf2]
 
   usc = UnitStateChecker(game)
   usc.add_unit(True, inf)
+  usc.add_unit(True, inf3)
   usc.add_unit(False, inf2)
 
 
@@ -153,9 +158,8 @@ if __name__ == "__main__":
 
     if game.done: break
 
-
-    inf.update_info()   # like hulls and position
-    inf2.update_info()
+    for u in usc.all_units:
+      u.update_info()
     
     # Checking if units are fighting
     usc.update_states()
@@ -175,28 +179,22 @@ if __name__ == "__main__":
         k = (k + 1) % len(traj.control_vertex_list)
 
 
-    # CHECKING COLLISION BETWEEN FIGHTING AREA OF THE UNITS
-    # from utils.pymunk_utils import do_polygons_intersect
+    if inf3.controller.fight_controller.target is None:
+      inf3.controller.attack(inf2)
 
-
-    if inf.state == UnitState.FIGHT:
-      print("STOPPED")
-      stop = True
-
-
+    ### TESTING RANDOM DEATHS ###
     # if time() - start > 2:
     #   start = time()
     #   np.random.choice(inf.soldiers).health = -1
 
     if not stop:
-      inf.update(dt)
-      inf2.update(dt)
+      for u in usc.all_units: u.update(dt)
       game.update(dt)
 
+
+    for u in usc.all_units: u.draw(DEBUG)
     game.draw(DEBUG)
-    inf.draw(DEBUG)
-    inf2.draw(DEBUG)
-    traj.draw()
+    # traj.draw()
 
     pygame.display.flip()
     game.clock.tick(game.fps)
@@ -206,13 +204,99 @@ if __name__ == "__main__":
       game.video.append(arr.astype(np.uint8))
 
 
+# for s in inf.soldiers:
+#   if len(s.enemy_melee_range) != 0:
+#     break
+
+# s,s1 = s, list(s.enemy_melee_range)[0]
+
+# s_pos = s.body.position
+# s1_pos = s1.body.position
+# plt.scatter(*s_pos, color = "green")
+# plt.plot((s_pos.x,s_pos.x+s.body.velocity.x),
+#           (s_pos.y,s_pos.y+s.body.velocity.y))
+# plt.scatter(*s1.body.position, color = "red")
+
+# vel = s.body.velocity
+# diff = -vel.projection(s1_pos-s_pos)
+# plt.plot((s_pos.x,s_pos.x+diff.x),
+#           (s_pos.y,s_pos.y+diff.y))
+
+
+
+# plt.scatter(*vel)
+# plt.scatter(*diff)
+# plt.scatter(*p_comp)
+
+
+
+# plt.scatter(*s1.body.position, color = "red")
+
+
+
+
 # import matplotlib.pyplot as plt
-
-# plt.scatter(*np.array(inf.get_soldiers_pos(True)).T)
-# plt.scatter(*np.array(vertices).T)
-
-# plt.scatter(*np.array(inf2.get_soldiers_pos(True)).T)
-# plt.scatter(*np.array(vertices2).T)
+# from sklearn.metrics import pairwise_distances
+# from scipy.optimize import linear_sum_assignment
 
 
 
+# first_rank_soldiers = [s for s in inf.soldiers if s.coord[0]==0]
+# our = np.array([list(s.body.position) for s in first_rank_soldiers])
+# plt.scatter(*np.array(inf.get_soldiers_pos(True)).T, color = "lightgreen")
+# plt.scatter(*our.T, color = "darkgreen")
+
+# enemy_border_soldiers = []
+# for s in inf2.soldiers:
+#   rind, cind = s.coord
+#   if rind == 0 or rind == inf2.n_ranks-1 or cind == 0 or cind == len(inf2.formation.ranks[0])-1:
+#     enemy_border_soldiers.append(s)
+# en = np.array([list(s.body.position) for s in enemy_border_soldiers])
+# plt.scatter(*np.array(inf2.get_soldiers_pos(True)).T, color = "red")
+# plt.scatter(*en.T, color = "darkred")
+
+
+
+
+# pd = np.zeros((len(first_rank_soldiers),len(en))) + np.inf
+# for i,p in enumerate(our):
+#   dd = ((p - en)**2).sum(1)
+#   inds = np.argsort(dd)[:5]
+#   not_inds = np.argsort(dd)[5:]
+  
+#   pd[i][inds] = dd[inds]
+#   for e in en[inds]: plt.plot(*np.vstack((p,e)).T)
+    
+# def linear_sum_assignment_with_inf(cost_matrix):
+#     cost_matrix = np.asarray(cost_matrix)
+#     min_inf = np.isneginf(cost_matrix).any()
+#     max_inf = np.isposinf(cost_matrix).any()
+#     if min_inf and max_inf:
+#         raise ValueError("matrix contains both inf and -inf")
+
+#     if min_inf or max_inf:
+#         values = cost_matrix[~np.isinf(cost_matrix)]
+#         m = values.min()
+#         M = values.max()
+#         n = min(cost_matrix.shape)
+#         # strictly positive constant even when added
+#         # to elements of the cost matrix
+#         positive = n * (M - m + np.abs(M) + np.abs(m) + 1)
+#         if max_inf:
+#             place_holder = (M + (n - 1) * (M - m)) + positive
+#         if min_inf:
+#             place_holder = (m + (n - 1) * (m - M)) - positive
+
+#     cost_matrix[np.isinf(cost_matrix)] = place_holder
+#     return linear_sum_assignment(cost_matrix)
+
+# _, col_ind = linear_sum_assignment_with_inf(pd)
+
+
+
+    
+# pd = pairwise_distances(our, en)
+# _, col_ind = linear_sum_assignment(pd)
+
+# for i in range(len(col_ind)):
+#   plt.plot(*np.vstack((our[i],en[col_ind][i])).T)

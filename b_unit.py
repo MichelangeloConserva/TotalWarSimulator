@@ -60,3 +60,7 @@ class Unit:
       s.unit = self
       soldiers.append(s)
     self.soldiers = soldiers
+
+  def draw(self, DEBUG):
+    for s in self.soldiers:
+      s.draw(DEBUG)

@@ -7,7 +7,7 @@ import pygame
 from pymunk.vec2d import Vec2d
 from pymunk.pygame_util import to_pygame, from_pygame
 
-speed_th_distance = 3
+speed_th_distance = 1
 destination_weight = 0.1
 
 class MovementController:
@@ -19,7 +19,7 @@ class MovementController:
 
   def move_at_point(self, final_pos, final_angle=None, n_ranks=None, remove_tu=True):
     
-    if type(final_pos)==list:    final_pos = np.array(final_pos)
+    if type(final_pos) in [list,tuple]:    final_pos = np.array(final_pos)
     elif type(final_pos)==Vec2d: final_pos = np.array(list(final_pos))
     
     start_pos = self.unit.pos
@@ -67,15 +67,15 @@ class MovementController:
         is_moving = True
 
       if len(s.enemy_melee_range):
-        speed = s.base_speed * self.unit.ATTACKING_MULTIPLIERS
+        speed = s.base_speed * self.unit.ATTACKING_MULTIPLIERS * self.unit.FORCE_MULTIPLIER
       elif max_ds - d > speed_th_distance:
-        speed = s.base_speed * 0.1
+        speed = s.base_speed * 0.1 * self.unit.FORCE_MULTIPLIER
       else:
-        speed = s.base_speed
+        speed = s.base_speed * self.unit.FORCE_MULTIPLIER
 
       s.body.angle = (s.target_position - s.body.position).angle
       s.move(
-        speed, self.unit.FORCE_MULTIPLIER, self.unit.LATERAL_NOISE_MULTIPLIER,
+        speed, self.unit.LATERAL_NOISE_MULTIPLIER,
       )
 
     # If one soldier is moving the the unit is moving
