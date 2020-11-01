@@ -1,19 +1,15 @@
-import sys, os  # Dirty trick to allow sibling imports
-
-sys.path.insert(0, os.path.abspath(".."))
-
 import pymunk
 import pygame
-import random
 import numpy as np
 
 from pymunk.pygame_util import to_pygame
+from pymunk.vec2d import Vec2d
 
-from b_soldier import Person
+from utils.pymunk_utils import limit_velocity
+from utils.pymunk_utils import kill_lateral_velocity
 from utils.colors import BLACK, BLUE
-from utils.pygame_utils import draw_text
-
-class Melee_Soldier(Person):
+  
+class Soldier:
 
   friction = 1.1
   elasticity = 0.01
@@ -32,10 +28,10 @@ class Melee_Soldier(Person):
   # dist =   1
 
   melee_range = 1
-  max_speed = 90
-  base_speed = 50
-  # max_speed   = 300
-  # base_speed  = 350
+  # max_speed = 90
+  # base_speed = 50
+  max_speed   = 150
+  base_speed  = 120
 
   max_health = 50
   attack = 10
@@ -46,21 +42,49 @@ class Melee_Soldier(Person):
   damping = 1
 
   @property
-  def is_alive(self):
-    return self.health > 0
-
+  def is_alive(self):   return self.health > 0
   @property
-  def components(self):
-    return [self.body, self.shape, self.sensor]
-
+  def components(self): return [self.body, self.shape, self.sensor]
+  
   def __init__(self, game, pos, col, coll):
-    Person.__init__(self, game, pos, col, coll)
+    # Linking
+    self.target_position = pos  # The location the soldier will go to
+    self.col = col
+    self.game = game
 
+    # Physics
+    self.body = self.add_body(pos)
+    self.body.velocity_func = limit_velocity
+    self.shape = self.add_shape(coll)
+    self.sensor = self.add_sensors(coll)  # Melee sensor
+    game.space.add(self.body, self.shape, self.sensor)
+
+    # Variables
+    self.enemy_melee_range = set()
+    self.enemy_in_range = set()
+    self.target_soldier = None  # TODO : To be used when fighting (?)
+    
     self.health = self.max_health
     self.size = 2 * self.radius + self.dist
 
+  def add_body(self, pos):
+    body = pymunk.Body()
+    body.position = pos
+    body.soldier = self
+    return body
+
+  def move(self, speed, LATERAL_NOISE_MULTIPLIER):
+    kill_lateral_velocity(self.body)
+    f = speed * self.mass
+    noise = np.random.randn() * self.mass * LATERAL_NOISE_MULTIPLIER
+    self.body.apply_force_at_local_point(Vec2d(f, noise), Vec2d(0, 0))
+    
+  def dies(self):
+    self.unit.soldiers.remove(self)
+    for c in self.components: self.game.space.remove(c)
+
   def add_shape(self, coll):
-    shape = pymunk.Circle(self.body, self.radius)
+    shape = pymunk.Circle(self.body, self.radius-1)
     shape.color = self.col
     shape.friction = self.friction
     shape.elasticity = self.elasticity
@@ -69,27 +93,15 @@ class Melee_Soldier(Person):
     return shape
 
   def add_sensors(self, coll):
-    """
-  Adding a melee sensor.
-  """
     sensor = pymunk.Circle(self.body, self.radius + self.melee_range)
     sensor.sensor = True
     sensor.collision_type = coll
     return sensor
-
-  def update(self, dt):
-
-    if not self.is_alive:
-      self.dies()
-
-    ### MELEE FIGHTING ###
-    r = [random.random() for _ in range(len(self.enemy_melee_range))]
-    for i, enemy in enumerate(self.enemy_melee_range):
-      r_ = r[i]
-      a = self.attack * r_
-      d = enemy.defense * r_
-      enemy.health -= max(a - d, 0) * dt
-
+  
+  def update(self, dt): 
+    return 
+  
+  
   def draw(self, DEBUG):
     pos = to_pygame(self.body.position, self.game.screen)
     pygame.draw.circle(self.game.screen, self.col, pos, self.radius)
@@ -111,4 +123,4 @@ class Melee_Soldier(Person):
       # DRAW COORDINATES 
       # draw_text(f"{self.coord[0]},{self.coord[1]}", self.game.screen, self.game.font, self.body.position,
       #           np.pi)
-
+      pass

@@ -1,7 +1,3 @@
-import sys, os  # Dirty trick to allow sibling imports
-
-sys.path.insert(0, os.path.abspath(".."))
-
 import numpy as np
 import pymunk, pygame
 import math
@@ -17,12 +13,15 @@ from shapely.geometry.polygon import Polygon
 from utils.pymunk_utils import rotate_matrix, spaced_vector
 
 
-class BaseFormation:
-  def __init__(self, unit, melee_range):
-    self.melee_range = melee_range
+
+class Formation:
+    
+  
+  def __init__(self, unit, ratio, melee_range):
     self.unit = unit
     self.space = unit.game.space
-    self.intra_springs = set()
+    self.melee_range = melee_range
+    self.ratio = ratio
 
   def get_hulls(self, for_draw = False):
     points = np.array(self.unit.get_soldiers_pos(False))
@@ -69,25 +68,12 @@ class BaseFormation:
         (expanded[simplex, 0].tolist(), expanded[simplex, 1].tolist())
       )
     return inf_simplices, fight_simplices
-
-
-  def get_formation(self, *args, **kwargs):
-    raise NotImplementedError("get_formation")
-
-  def execute_formation(self, *args, **kwargs):
-    raise NotImplementedError("execute_formation")
-
-
-class SquareFormation(BaseFormation):
-  def __init__(self, unit, melee_range, ratio):
-    BaseFormation.__init__(self, unit, melee_range)
-    self.ratio = ratio
-
+    
   def update_n_ranks(self):
     """
-  When soldiers die we want to maintain the same ratio of the unit between 
-  ranks and columns.
-  """
+    When soldiers die we want to maintain the same ratio of the unit between 
+    ranks and columns.
+    """
     self.unit.n_ranks = math.ceil((self.unit.n / self.ratio) ** 0.5)
 
   def get_formation(self, pos, angle, n_ranks, n, size, dist):
@@ -114,7 +100,7 @@ class SquareFormation(BaseFormation):
     # Storing the rank information
     self.ranks = [[] for _ in range(max(ranks_ind.values()) + 1)]
 
-    pd = pairwise_distances(formation, self.unit.get_soldiers_pos())**2
+    pd = pairwise_distances(formation, self.unit.get_soldiers_pos())
     row_ind, col_ind = linear_sum_assignment(pd)
 
     for i in range(len(row_ind)):
