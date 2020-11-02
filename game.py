@@ -3,6 +3,7 @@ import numpy as np
 
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_q, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from pymunk.pygame_util import DrawOptions
+from pymunk.pygame_util import to_pygame, from_pygame
 
 from utils.settings.physics import space_damping
 from utils.settings.game import WIDTH, HEIGHT
@@ -17,6 +18,8 @@ class Game:
     self.video = []
     self.fps = 60.0
     self.done = False
+    self.record_mouse = False
+    self.mouse_traj = []
 
     self.record = record
 
@@ -65,6 +68,10 @@ class Game:
   # =============================================================================
   # Utilities
   # =============================================================================
+
+  def get_mouse_pos(self, is_pygame = True): 
+    if is_pygame: return pygame.mouse.get_pos()
+    return from_pygame(pygame.mouse.get_pos(), self.screen)
 
   def save_video(self):
     from pygifsicle import optimize

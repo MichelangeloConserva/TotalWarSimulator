@@ -20,12 +20,12 @@ class Soldier:
   # dist = 5
 
   # MEDIUM VERSION
-  radius = 5
-  dist = 3
+  # radius = 5
+  # dist = 3
 
   # SMALL VERSION
-  # radius = 2
-  # dist =   1
+  radius = 2
+  dist =   1
 
   melee_range = 1
   # max_speed = 90

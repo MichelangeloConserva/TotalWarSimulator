@@ -8,6 +8,7 @@ from scipy.spatial import ConvexHull, convex_hull_plot_2d
 
 from utils.pygame_utils import draw_text
 from utils.enums import Role, UnitType, UnitState
+from utils.colors import BLACK, BLUE, GREEN
 from Formation import Formation
 from Soldier import Soldier
 
@@ -39,6 +40,19 @@ class Unit:
     if not hasattr(self, "_formation"):
       self._formation = Formation(self, self.melee_range, self.ratio)
     return self._formation
+  @property
+  def pos_direction(self):
+    n = 0
+    center = Vec2d()
+    first_line_pos = Vec2d()
+    for s in self.soldiers:
+      if s.coord[0] == self.n_ranks-1:
+        first_line_pos += s.body.position
+        n += 1
+      center += s.body.position / self.n
+    first_line_pos /= n
+    return center, (first_line_pos-center).normalized()
+    
 
   def get_soldiers_pos(self, vec2d=True):
     typ = Vec2d if vec2d else list
@@ -94,5 +108,14 @@ class Unit:
         pygame.draw.line(
           self.game.screen, (0, 0, 0), (p1[0], p2[0]), (p1[1], p2[1])
         )
+        
+      
+      # DRAW DIRECTION
+      center, direction = self.pos_direction
+      p1 = to_pygame(center, self.game.screen)
+      p2 = to_pygame(center + direction*30, self.game.screen)
+      pygame.draw.aalines(self.game.screen, GREEN, False, [p1,p2], 10)
+        
+        
 
     
