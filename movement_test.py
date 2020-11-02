@@ -16,10 +16,12 @@ from utils.pymunk_utils import calc_vertices
 from utils.pymunk_utils import do_polygons_intersect
 from game import Game
 
+np.set_printoptions(precision=3, suppress=1)
+
 TrajPoint = namedtuple('TrajPoint', ['x', 'y', 'angle'])
 
-record = False
-DEBUG = True
+record = True
+DEBUG = False
 
 def game_loop(game, stop):
 
@@ -35,8 +37,8 @@ def game_loop(game, stop):
 
 angle_th = 40
 # def check_dir_angle(dir_angle): return dir_angle > 50 and dir_angle < 130
-def check_dir_angle(dir_angle): return dir_angle > angle_th and dir_angle < 180-angle_th
-  
+# def check_dir_angle(dir_angle): return dir_angle > angle_th and dir_angle < 180-angle_th
+def check_dir_angle(dir_angle): return  dir_angle > 50
 
 
 # def get_formation():
@@ -53,7 +55,13 @@ dt = 1 / game.fps
 k = 0
 unit = Unit(game, (300, 300), np.pi, RED, 1)
 soldiers = unit.soldiers
+for s in soldiers: s.trajectory = []
 get_formation = unit.formation.get_formation
+
+
+
+
+
 trajectory = [list(unit.pos), (675, 401), (1022, 290), (1022, 498), (798, 642), (365, 268)]
 
 ntraj = np.array(trajectory)
@@ -62,39 +70,56 @@ f, u = interpolate.splprep(ntraj.T.tolist(), s=0, k=2)
 xint, yint = interpolate.splev(np.linspace(0, 1, int(length/80)), f)
 # xint, yint = interpolate.splev(np.linspace(0, 1, 8), f)
 
-import matplotlib.pyplot as plt
-# plt.scatter(xint, yint)
-# plt.scatter(*ntraj.T)
 
 trajectory = np.vstack((xint, yint)).T.tolist()
+directions = np.diff(trajectory,axis=0)
+directions = (directions / ((directions**2).sum(1)**0.5).reshape(-1,1)).round(2) #* int(length/80)
+
+import matplotlib.pyplot as plt
+plt.scatter(xint, yint)
+for i in range(len(xint)-1):
+  plt.plot((xint[i],xint[i]+directions[i][0]), (yint[i],yint[i]+directions[i][1]), color = "red")
+# plt.scatter(*ntraj.T)
+
+
+
 traj_form = []
-
-for s in soldiers: s.trajectory = []
-last_pos = unit.pos
-plt.scatter(*last_pos, color = "blue")
-for i,t in enumerate(trajectory[1:]):
+last_dir = Vec2d(0,1)
+final_dir = None
+directions = [Vec2d(list(d)) for d in directions]
+for i,t in enumerate(trajectory):
   
-  cur = Vec2d(trajectory[i+1]) 
-  last = Vec2d(trajectory[i])
-  two_last = Vec2d(trajectory[i-1]) if i-1 > 0  else None
-
-  dir_angle = abs((cur-last).get_angle_degrees_between(last-two_last)) if not two_last is None else 0
-  formation_angle = (cur-last).perpendicular().angle  
+  cur_pos = Vec2d(trajectory[i])
   
-  print(dir_angle)
-  plt.scatter(*cur, color = "red" if check_dir_angle(dir_angle) else "blue")
+  if i < len(directions):
+    cur_dir = directions[i]
+  else:
+    if final_dir is None:
+      cur_dir = cur_pos - Vec2d(trajectory[i-1])
+    else:
+      cur_dir = last_dir
+      
+  next_pos = Vec2d(trajectory[i+1]) if i+1 < len(trajectory)  else None
 
-  pos = np.array(list(cur))
+  dir_angle = abs((last_dir).get_angle_degrees_between(cur_dir)) 
+  # print(dir_angle)
+  # plt.scatter(*cur_pos, color = "blue" if dir_angle < 50 else "red")
+  
+  formation_angle = (cur_dir).perpendicular().angle  
+  
+  # print(dir_angle)
+  # plt.scatter(*cur, color = "red" if check_dir_angle(dir_angle) else "blue")
+
+  pos = np.array(trajectory[i])
   n_ranks = unit.n_ranks
   n = unit.n
   size, dist = unit.soldier_size_dist
   f1, ranks_ind = get_formation(pos, formation_angle, n_ranks, n, size, dist)
   traj_form.append(f1)
-  last_pos = Vec2d(t)
 
 
   if check_dir_angle(dir_angle):
-    print("CHANGE",i)
+    print("CHANGE",i, dir_angle)
     ranks = [[] for _ in range(max(ranks_ind.values()) + 1)]
     
     pd = pairwise_distances(f1, traj_form[-1])
@@ -114,6 +139,91 @@ for i,t in enumerate(trajectory[1:]):
       if len(s.trajectory) > 0: coord = s.trajectory[-1][1] 
       else: coord = s.coord
       s.trajectory.append((d, coord))
+  
+  last_dir = cur_dir
+  
+  
+  
+  
+
+
+
+
+# Works fine
+# traj_form = []
+
+# for s in soldiers: s.trajectory = []
+# last_pos = unit.pos
+# plt.scatter(*last_pos, color = "blue")
+# for i,t in enumerate(trajectory[1:]):
+  
+#   cur = Vec2d(trajectory[i+1]) 
+#   last = Vec2d(trajectory[i])
+#   two_last = Vec2d(trajectory[i-1]) if i-1 > 0  else None
+
+#   dir_angle = abs((cur-last).get_angle_degrees_between(last-two_last)) if not two_last is None else 0
+#   formation_angle = (cur-last).perpendicular().angle  
+  
+#   print(dir_angle)
+#   plt.scatter(*cur, color = "red" if check_dir_angle(dir_angle) else "blue")
+
+#   pos = np.array(list(cur))
+#   n_ranks = unit.n_ranks
+#   n = unit.n
+#   size, dist = unit.soldier_size_dist
+#   f1, ranks_ind = get_formation(pos, formation_angle, n_ranks, n, size, dist)
+#   traj_form.append(f1)
+#   last_pos = Vec2d(t)
+
+
+#   if check_dir_angle(dir_angle):
+#     print("CHANGE",i)
+#     ranks = [[] for _ in range(max(ranks_ind.values()) + 1)]
+    
+#     pd = pairwise_distances(f1, traj_form[-1])
+#     row_ind, col_ind = linear_sum_assignment(pd)
+    
+#     for i in range(len(row_ind)):
+#       d = Vec2d(f1[i].tolist())
+#       s = unit.soldiers[col_ind[i]]
+#       ranks[ranks_ind[i]].append(s)
+#       coord = list((ranks_ind[i], len(ranks[ranks_ind[i]]) - 1))
+#       s.trajectory.append((d, coord))
+    
+#   else:
+#     for i,s in enumerate(unit.soldiers):
+#       d = Vec2d(f1[i].tolist())
+#       s.target_position = d
+#       if len(s.trajectory) > 0: coord = s.trajectory[-1][1] 
+#       else: coord = s.coord
+#       s.trajectory.append((d, coord))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -136,6 +246,7 @@ while not game.done:
     
     distances = []
     changed = []
+    max_length_traj = 0
     for s in soldiers:
       distances.append(s.target_position.get_dist_sqrd(s.body.position)**0.5)
       if  distances[-1] < 5 and len(s.trajectory)>1: 
@@ -143,6 +254,7 @@ while not game.done:
         s.target_position, s.coord = s.trajectory[0]
         s.changed_target = True
       changed.append(s.changed_target) 
+      max_length_traj = max(len(s.trajectory), max_length_traj)
     
     if sum(changed) == unit.n:
       for s in soldiers: s.changed_target = False
@@ -152,7 +264,9 @@ while not game.done:
     min_dist = np.min(np.array(distances)[True != np.array(changed)])
     for i,s in enumerate(soldiers):
       
-      if s.changed_target:
+      # if s.changed_target:
+      #   cur_speed = s.base_speed / 4 # min_dist / t
+      if len(s.trajectory) < max_length_traj:
         cur_speed = s.base_speed / 4 # min_dist / t
       else:
         cur_speed = distances[i] / t
