@@ -69,9 +69,14 @@ game = Game(record)
 dt = 1 / game.fps
 
 
-units = []
-for i in [200,400,600, 800, 1000, 1200]:
-  units.append(Unit(game, (i, 300), np.pi, RED, 1))
+units_1 = []
+for i in [200,400]:
+  units_1.append(Unit(game, (i, 600), np.pi, RED, 1))
+units_2 = []
+for i in [200,400]:
+  units_2.append(Unit(game, (i, 300), np.pi, GREEN, 2))
+
+units = units_1 + units_2
 
 
 selected_unit = None

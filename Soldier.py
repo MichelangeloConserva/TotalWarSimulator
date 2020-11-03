@@ -25,7 +25,7 @@ class Soldier:
 
   # SMALL VERSION
   radius = 2
-  dist =   1
+  dist =   2
 
   melee_range = 1
   # max_speed = 90
@@ -63,6 +63,8 @@ class Soldier:
     self.enemy_melee_range = set()
     self.enemy_in_range = set()
     self.target_soldier = None  # TODO : To be used when fighting (?)
+    self.trajectory = []
+    self.changed_target = False
     
     self.health = self.max_health
     self.size = 2 * self.radius + self.dist
@@ -98,13 +100,16 @@ class Soldier:
     sensor.collision_type = coll
     return sensor
   
-  def update(self, dt): 
-    return 
-  
+  def next_target(self):
+    self.trajectory.pop(0)
+    self.target_position, self.coord = self.trajectory[0]
+    self.changed_target = True
   
   def draw(self, DEBUG):
     pos = to_pygame(self.body.position, self.game.screen)
-    pygame.draw.circle(self.game.screen, self.col, pos, self.radius)
+    pygame.draw.circle(self.game.screen, self.col, pos, self.radius+1)
+    if self.unit.is_selected:
+      pygame.draw.circle(self.game.screen, BLACK, pos, self.radius-1)
 
     if DEBUG:
       # if self.unit.is_selected:

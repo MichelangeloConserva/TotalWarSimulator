@@ -118,25 +118,3 @@ class Formation:
   def formation_info_update(self):
     self.unit.inf_hull, self.unit.fight_hull = self.get_hulls()
     self.unit.pos = self.unit._pos
-
-
-## OLD CODE FOR CONVEX HULL ##
-# points = np.array(self.unit.get_soldiers_pos(False))
-# center = points.mean(0)
-# for i in range(len(points)):
-#   diff = Vec2d(list(points[i] - center))
-#   l = diff.normalize_return_length()
-#   # Expanding the convex hull according the the melee range
-#   # TODO : the expansion can be done in a better way
-#   # using the center is lame
-#   p = list( diff*(l+self.melee_range) + Vec2d(list(center)))
-#   points[i] = to_pygame(p, self.unit.game.screen) if in_pygame else p
-# hull = ConvexHull(points)
-# vertices = []
-# simplices = []
-# for simplex in hull.simplices:
-#   # vertices.append(points[simplex,0].tolist())
-#   vertices.append((points[simplex,0][0],points[simplex,1][0]))
-#   vertices.append((points[simplex,0][1],points[simplex,1][1]))
-#   simplices.append((points[simplex,0].tolist(),points[simplex,1].tolist()))
-# return vertices, simplices
