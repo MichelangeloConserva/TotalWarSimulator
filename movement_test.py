@@ -25,6 +25,24 @@ np.set_printoptions(precision=3, suppress=1)
 record = False
 DEBUG = True
 
+
+
+def unit_selection():
+  global selected_unit
+  
+  mouse_pos = game.get_mouse_pos(False)
+  for u in units:
+    inf_simplices, _ = u.formation.get_hulls()  
+    if inf_simplices.contains(Point(*mouse_pos)):
+      
+      if not selected_unit is None: selected_unit.is_selected = False
+      u.is_selected = True
+      selected_unit = u
+      return
+  
+  if not selected_unit is None: selected_unit.is_selected = False
+  selected_unit = None
+
 def game_loop(game, stop):
 
   for event in pygame.event.get():
@@ -38,23 +56,14 @@ def game_loop(game, stop):
   
     if event.type == pygame.MOUSEBUTTONDOWN:
       if event.button == 3:
+        
+        
+        
         game.record_mouse = True
         game.mouse_traj = [game.get_mouse_pos(False)]
+        
       if event.button == 1:
-        global selected_unit
-        
-        mouse_pos = game.get_mouse_pos(False)
-        for u in units:
-          inf_simplices, _ = u.formation.get_hulls()  
-          if inf_simplices.contains(Point(*mouse_pos)):
-            
-            if not selected_unit is None: selected_unit.is_selected = False
-            u.is_selected = True
-            selected_unit = u
-            return
-        
-        if not selected_unit is None: selected_unit.is_selected = False
-        selected_unit = None
+        unit_selection()
         
     if event.type == pygame.MOUSEBUTTONUP:
       if event.button == 3:
@@ -92,7 +101,6 @@ while not game.done:
     if not game.record_mouse and len(game.mouse_traj) > 0:
       
       if len(game.mouse_traj) > 3:
-        for s in selected_unit.soldiers: s.trajectory = []
         _, start_dir = selected_unit.pos_direction
         final_dir = None
         trajectory = np.array(game.mouse_traj)

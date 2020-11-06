@@ -18,8 +18,6 @@ from Soldier import Soldier
 
 
 
-
-
 class Unit:
 
   soldier = Soldier
@@ -49,7 +47,7 @@ class Unit:
   @property
   def formation(self):
     if not hasattr(self, "_formation"):
-      self._formation = Formation(self, self.melee_range, self.ratio)
+      self._formation = Formation(self, self.ratio, self.soldier.melee_range)
     return self._formation
   @property
   def pos_direction(self):
@@ -109,6 +107,26 @@ class Unit:
     size, dist = self.soldier_size_dist
     return self.formation.get_formation(pos, angle, n_ranks, n, size, dist)
   
+  
+  def set_formation_(self, formation, ranks_ind):
+    
+    # Storing the rank information
+    ranks = [[] for _ in range(max(ranks_ind.values()) + 1)]
+
+    pd = pairwise_distances(formation, self.get_soldiers_pos())
+    row_ind, col_ind = linear_sum_assignment(pd)
+    
+    soldiers = []
+    for i in range(len(row_ind)):
+      d = Vec2d(formation[i].tolist())
+      s = self.soldiers[col_ind[i]]
+      ranks[ranks_ind[i]].append(s)
+      coord = list((ranks_ind[i], len(ranks[ranks_ind[i]]) - 1))
+      s.trajectory.append((d, coord))
+      soldiers.append(s)
+    self.soldiers = soldiers
+    
+  
   def set_formation(self, f1, ranks_ind, traj_form, is_LSA):
   
     if is_LSA:
@@ -134,6 +152,7 @@ class Unit:
       else: coord = s.coord
       s.trajectory.append((d, coord))
     
+    
   def update_soldiers_trajectory(self):
     for s in self.soldiers:
       s.target_position, s.coord = s.trajectory[0]
@@ -141,9 +160,13 @@ class Unit:
     
     
   def set_spline_formation_trajectory(self, start_dir, final_dir, trajectory, show = False):
+    
+    for s in self.soldiers: s.reset_traj()
+    
+    
     spline_trajectory, spline_directions = self.get_spline(np.array(trajectory), show)
     
-    last_dir = start_dir
+    last_dir = start_dir if not start_dir is None else self.pos_direction[1]
     traj_form = [self.get_soldiers_pos(False)]
     for i in range(len(spline_trajectory)):
       
@@ -163,6 +186,19 @@ class Unit:
       
     self.traj = spline_trajectory
   
+  @property
+  def enemy_target(self):
+    return self._enemy_target
+  @enemy_target.setter
+  def enemy_target(self, e):
+      self._enemy_target = e
+      
+      # Going toward it
+      e_pos, pos = e.pos, self.pos
+      trajectory = [pos, e_pos*0.5+pos*0.5, e_pos*0.85+pos*0.15]
+      start_dir = final_dir = -(e_pos - pos)
+      self.set_spline_formation_trajectory(start_dir, final_dir, trajectory)
+      
 
   def __init__(self, game, pos, angle, col, coll):
 
@@ -174,8 +210,10 @@ class Unit:
     self.angle = angle
     self.final_pos = pos
 
+    self._enemy_target = None
     self.is_selected = False
     self.is_moving = False
+    self.is_fighting = False
     self.order = None
     self.before_order = None
     self.units_fighting_against = set()
@@ -207,18 +245,18 @@ class Unit:
     for s in self.soldiers:
       if len(s.trajectory) > 0: update_soldiers = True
       distances.append(s.target_position.get_dist_sqrd(s.body.position)**0.5)
-      if  distances[-1] < 12 and len(s.trajectory)>1: 
+      if  distances[-1] < 35 and len(s.trajectory)>1: 
         s.next_target()
       changed.append(s.changed_target) 
       max_length_traj = max(len(s.trajectory), max_length_traj)
     
-    if not update_soldiers: return
+    # if not update_soldiers: return
     
     sum_changed = sum(changed)
     if sum_changed == self.n:
       for s in self.soldiers: s.changed_target = False
       changed = [False] * self.n
-    # elif (self.n - sum_changed)/self.n <= 0.1:
+    # elif (self.n - sum_changed) <= 10:
     #   for s,c in zip(self.soldiers, changed):
     #     if c: 
     #       s.next_target()
@@ -235,7 +273,7 @@ class Unit:
       #   cur_speed = s.base_speed / 4 # min_dist / t
       if len(s.trajectory) < max_length_traj:
         # cur_speed = s.base_speed / 10 # min_dist / t
-        cur_speed =  min_dist / t * 0.1
+        cur_speed =  min_dist / t * 0.25
       else:
         cur_speed = distances[i] / t
       if s.target_position.get_dist_sqrd(s.body.position) < 2: continue

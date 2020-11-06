@@ -135,18 +135,20 @@ def pre_solve_enemy(arbiter, space, _):
   #     -s1.body.velocity.projection(s.body.position-s1.body.position), Vec2d(0, 0))
   return True
 
-
-
 def add_collisions(space):
   CH_33 = space.add_collision_handler(3, 3)  # 3 is the reference value for
   CH_32 = space.add_collision_handler(3, 2)  # utility objects
   CH_31 = space.add_collision_handler(3, 1)
   CH_12 = space.add_collision_handler(2, 1)
+  CH_11 = space.add_collision_handler(1, 1)
+  CH_22 = space.add_collision_handler(2, 2)
 
   # Collisions between soldiers and soldiers' sensors
   CH_12.begin = begin_solve_enemy
   CH_12.separate = separate_solve_enemy
   CH_12.pre_solve = pre_solve_enemy
+  # CH_11.pre_solve = lambda *args, **kwargs: False
+  # CH_22.pre_solve = lambda *args, **kwargs: False
 
   # Utility objects should not create collisions
   CH_33.begin = lambda *args, **kwargs: False

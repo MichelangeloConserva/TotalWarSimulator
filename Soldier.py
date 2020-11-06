@@ -24,10 +24,10 @@ class Soldier:
   # dist = 3
 
   # SMALL VERSION
-  radius = 2
-  dist =   2
+  radius = 3
+  dist =   1
 
-  melee_range = 1
+  melee_range = 8
   # max_speed = 90
   # base_speed = 50
   max_speed   = 150
@@ -63,11 +63,14 @@ class Soldier:
     self.enemy_melee_range = set()
     self.enemy_in_range = set()
     self.target_soldier = None  # TODO : To be used when fighting (?)
-    self.trajectory = []
-    self.changed_target = False
+    self.reset_traj()
     
     self.health = self.max_health
     self.size = 2 * self.radius + self.dist
+
+  def reset_traj(self):
+    self.trajectory = []
+    self.changed_target = False
 
   def add_body(self, pos):
     body = pymunk.Body()
@@ -86,7 +89,7 @@ class Soldier:
     for c in self.components: self.game.space.remove(c)
 
   def add_shape(self, coll):
-    shape = pymunk.Circle(self.body, self.radius-1)
+    shape = pymunk.Circle(self.body, self.radius)
     shape.color = self.col
     shape.friction = self.friction
     shape.elasticity = self.elasticity
@@ -95,7 +98,7 @@ class Soldier:
     return shape
 
   def add_sensors(self, coll):
-    sensor = pymunk.Circle(self.body, self.radius + self.melee_range)
+    sensor = pymunk.Circle(self.body, self.radius)#+ self.melee_range)
     sensor.sensor = True
     sensor.collision_type = coll
     return sensor
@@ -107,7 +110,7 @@ class Soldier:
   
   def draw(self, DEBUG):
     pos = to_pygame(self.body.position, self.game.screen)
-    pygame.draw.circle(self.game.screen, self.col, pos, self.radius+1)
+    pygame.draw.circle(self.game.screen, self.col, pos, self.radius)
     if self.unit.is_selected:
       pygame.draw.circle(self.game.screen, BLACK, pos, self.radius-1)
 
