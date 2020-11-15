@@ -41,7 +41,7 @@ public class SquareFormation : Formation
             GameObject[] curRow = new GameObject[curRowNum];
             for (int j = 0; j < curRowNum; j++)
                 curRow[j] = Instantiate(soldierGhost, 
-                    transform.position + Vector3.left * ((curRowNum - 1) * soldierDist / 2 - j * soldierDist) + Vector3.forward * (halfColLenght - i * soldierDist), 
+                    transform.position - transform.right * ((curRowNum - 1) * soldierDist / 2 - j * soldierDist) + transform.forward * (halfColLenght - i * soldierDist), 
                     Quaternion.Euler(0, rotation, 0), transform);
             remainingPositions -= curRowNum;
             formation[i] = curRow;

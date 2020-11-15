@@ -45,20 +45,57 @@ public class UnitController : MonoBehaviour
             {
                 var sold = Instantiate(soldierPrefab, curFormationRow[j].transform.position, curFormationRow[j].transform.rotation, transform.GetChild(0));
                 sold.GetComponent<SoldierController>().team = team;
+
+
                 curRowSoldiers[j] = sold;
 
                 // trying adding springs
                 if (j>0)
                 {
-                    Debug.Log("adas");
-
+                    var dist = Vector3.Distance(sold.transform.position, curRowSoldiers[j - 1].transform.position);
                     sold.AddComponent<SpringJoint>();
                     var spring = sold.GetComponent<SpringJoint>();
                     spring.connectedBody = curRowSoldiers[j - 1].GetComponent<Rigidbody>();
-                    spring.minDistance = 0;
-                    spring.damper = 0;
-                    spring.spring = 10;
-                    spring.maxDistance = Vector3.Distance(sold.transform.position, curRowSoldiers[j - 1].transform.position) * 1.1f;
+                    spring.minDistance = dist * 0.9f;
+                    spring.damper = 350;
+                    spring.spring = 500;
+                    spring.maxDistance = dist * 1.1f;
+                    spring.enableCollision = true;
+
+                    //sold.AddComponent<HingeJoint>();
+                    //var hinge = sold.GetComponent<HingeJoint>();
+                    //hinge.autoConfigureConnectedAnchor = false;
+                    //hinge.connectedBody = curRowSoldiers[j - 1].GetComponent<Rigidbody>();
+                    //hinge.autoConfigureConnectedAnchor = false;
+                    //hinge.anchor = GetVector3Down((-sold.transform.position + curRowSoldiers[j - 1].transform.position));
+                    //hinge.connectedAnchor = Vector3.zero;
+                    //hinge.enableCollision = true;
+                    //hinge.axis = Vector3.up * 180;
+
+
+                }
+
+                if (i > 0)
+                {
+                    var dist = Vector3.Distance(sold.transform.position, soldiers[i - 1][j].transform.position);
+                    sold.AddComponent<SpringJoint>();
+                    var spring = sold.GetComponent<SpringJoint>();
+                    spring.connectedBody = soldiers[i - 1][j].GetComponent<Rigidbody>();
+                    spring.minDistance = dist * 0.9f;
+                    spring.damper = 350;
+                    spring.spring = 500;
+                    spring.maxDistance = dist * 1.1f;
+                    spring.enableCollision = true;
+
+
+                    //sold.AddComponent<HingeJoint>();
+                    //var hinge = sold.GetComponent<HingeJoint>();
+                    //hinge.autoConfigureConnectedAnchor = false;
+                    //hinge.connectedBody = soldiers[i - 1][j].GetComponent<Rigidbody>();
+                    //hinge.anchor = GetVector3Down((-sold.transform.position + soldiers[i - 1][j].transform.position));
+                    //hinge.connectedAnchor = Vector3.zero;
+                    //hinge.enableCollision = true;
+                    //hinge.axis = Vector3.up * 180;
 
                 }
 
@@ -115,7 +152,6 @@ public class UnitController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
 
 
 

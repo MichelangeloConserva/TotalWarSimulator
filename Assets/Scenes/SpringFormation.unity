@@ -460,8 +460,8 @@ MonoBehaviour:
   soldierPrefab: {fileID: 132630228053525148, guid: fd3e74978383592419e37a4d6a4d63a3,
     type: 3}
   stats:
-    numOfSoldiers: 100
-    columns: 25
+    numOfSoldiers: 50
+    columns: 10
     distanceOfSoldiers: 1
   unitStatus: 1
   formationT: {fileID: 0}
@@ -515,8 +515,8 @@ MonoBehaviour:
   soldierPrefab: {fileID: 3795907478961804527, guid: f5f11c739389f24449710823aa7f8770,
     type: 3}
   stats:
-    numOfSoldiers: 100
-    columns: 25
+    numOfSoldiers: 50
+    columns: 10
     distanceOfSoldiers: 1
   unitStatus: 1
   formationT: {fileID: 0}
