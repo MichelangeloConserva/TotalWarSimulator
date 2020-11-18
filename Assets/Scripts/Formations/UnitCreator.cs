@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using static Utils;
 
 [ExecuteInEditMode]
 public class UnitCreator : MonoBehaviour
@@ -14,120 +16,57 @@ public class UnitCreator : MonoBehaviour
     //public Vector3 starPos;
     // public Vector3 direction;
 
-
-    public GameObject[][] formation;
-
-    public List<GameObject> soldiers, connectors;
+    public bool updateFormation;
 
 
+    public GameObject[][] soldiersInFormation;
+
+    public FormationResult fRes;
+    public bool withJoints = false;
 
 
-
-    private void CreateChain()
+    public List<GameObject> GetSoldiers()
     {
-        foreach (var g in soldiers)
-            DestroyImmediate(g);
-        foreach (var g in connectors)
-            DestroyImmediate(g);
-
-
-        soldiers = new List<GameObject>();
-        connectors = new List<GameObject>();
+        List<GameObject> soldiers = new List<GameObject>();
+        for (int row = 0; row < soldiersInFormation.Length; row++)
+            for (int col = 0; col < soldiersInFormation[row].Length; col++)
+                soldiers.Add(soldiersInFormation[row][col]);
+        return soldiers;
+    }
 
 
 
-        int remainingPositions = numOfSoldiers;
-        int numOfRows = (int)Mathf.Ceil(numOfSoldiers / (float)cols);
-        float halfRowLenght = (cols - 1) * soldierDistVertical / 2;
-        float halfColLenght = (numOfRows - 1) * soldierDistLateral / 2;
+    private void CleanUnit()
+    {
+        var tempList = transform.Cast<Transform>().ToList();
+        foreach (var child in tempList)
+            DestroyImmediate(child.gameObject);
+    }
 
 
-        formation = new GameObject[numOfRows][];
-        for (int i = 0; i < numOfRows; i++)
+    private void InstantiateUnit()
+    {
+        CleanUnit();
+
+        fRes = GetFormAtPos(transform.position, transform.forward, numOfSoldiers, cols, soldierDistLateral, soldierDistVertical);
+        Vector3[][] formationPositions = fRes.positions;
+        soldiersInFormation = new GameObject[formationPositions.Length][];
+        for (int i = 0; i < formationPositions.Length; i++)
         {
-            int curRowNum = remainingPositions > cols ? cols : remainingPositions;
-            GameObject[] curRow = new GameObject[curRowNum];
-
-
-            var cur = Instantiate(soldierBase, transform.position - transform.right * ((curRowNum - 1) * soldierDistLateral / 2) + transform.forward * (halfColLenght - i * soldierDistVertical), 
-                transform.rotation, transform);
-            curRow[0] = cur;
-
-            if (i > 0)
-            {
-                cur.AddComponent<SpringJoint>();
-                var spring = cur.GetComponent<SpringJoint>();
-                spring.connectedBody = formation[i - 1][0].GetComponent<Rigidbody>();
-                spring.anchor = (spring.connectedBody.transform.position - cur.transform.position) * 0.5f;
-                spring.spring = 5000;
-                spring.damper = 100;
-            }
-
-
-
-
-            for (int j = 1; j < curRowNum; j++)
-            {
-                var next = Instantiate(soldierBase,
-                    transform.position - transform.right * ((curRowNum - 1) * soldierDistLateral / 2 - j * soldierDistLateral) + transform.forward * (halfColLenght - i * soldierDistVertical),
-                    transform.rotation, transform);
-                var curConnector = Instantiate(connector, cur.transform.position * 0.5f + next.transform.position * 0.5f, Quaternion.identity, transform);
-
-                var hindges = curConnector.GetComponents<HingeJoint>();
-                hindges[0].connectedBody = cur.GetComponent<Rigidbody>();
-                hindges[1].connectedBody = next.GetComponent<Rigidbody>();
-
-
-                soldiers.Add(cur);
-                soldiers.Add(next);
-                connectors.Add(curConnector);
-                curRow[j] = next;
-                cur = next;
-
-
-                if (i > 0)
-                {
-                    cur.AddComponent<SpringJoint>();
-                    var spring = cur.GetComponent<SpringJoint>();
-                    spring.connectedBody = formation[i - 1][j].GetComponent<Rigidbody>();
-                    spring.anchor = (spring.connectedBody.transform.position - cur.transform.position) * 0.5f;
-                    spring.spring = 5000;
-                    spring.damper = 100;
-                }
-
-
-
-            }
-
-            remainingPositions -= curRowNum;
-            formation[i] = curRow;
+            GameObject[] curRow = new GameObject[formationPositions[i].Length];
+            for (int j = 0; j < curRow.Length; j++)
+                curRow[j] = Instantiate(soldierBase, formationPositions[i][j], transform.rotation, transform);
+            soldiersInFormation[i] = curRow;
         }
-
-
-
-
-
-        //for (int i=0; i< columns-1; i++)
-        //{
-        //    var next = Instantiate(soldierBase, starPos + (1+i)* direction , Quaternion.identity, transform);
-        //    var curConnector = Instantiate(connector, cur.transform.position * 0.5f + next.transform.position*0.5f, Quaternion.identity, transform);
-
-        //    var hindges = curConnector.GetComponents<HingeJoint>();
-
-        //    hindges[0].connectedBody = cur.GetComponent<Rigidbody>();
-        //    hindges[1].connectedBody = next.GetComponent<Rigidbody>();
-
-
-        //    chain.Add(cur);
-        //    chain.Add(next);
-        //    connectors.Add(curConnector);
-
-        //    cur = next;
-        //}
-
 
     }
 
+
+    private void Start()
+    {
+        if (Application.isPlaying)
+            InstantiateUnit();
+    }
 
 
     // Update is called once per frame
@@ -135,7 +74,8 @@ public class UnitCreator : MonoBehaviour
     {
         if (!Application.isPlaying)
         {
-            CreateChain();
+            if (updateFormation)
+                InstantiateUnit();
         }
     }
 }

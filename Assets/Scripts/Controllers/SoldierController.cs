@@ -74,12 +74,6 @@ public class SoldierController : MonoBehaviour
             anim.SetBool("IsFighting", false);
     }
 
-
-
-    // DRag 18 for box collider
-
-
-    // Start is called before the first frame update
     void Start()
     {
         targetPos = transform.position;

@@ -320,7 +320,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39dd957cd4b94744cbab67ca41658e69, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  selectedUnit: {fileID: 1101515654}
+  acceleration: 0
+  unitToAttack: {fileID: 1101515654}
 --- !u!4 &898716931
 Transform:
   m_ObjectHideFlags: 0
