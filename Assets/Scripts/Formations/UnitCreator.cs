@@ -33,17 +33,12 @@ public class UnitCreator : MonoBehaviour
                 soldiers.Add(soldiersInFormation[row][col]);
         return soldiers;
     }
-
-
-
     private void CleanUnit()
     {
         var tempList = transform.Cast<Transform>().ToList();
         foreach (var child in tempList)
             DestroyImmediate(child.gameObject);
     }
-
-
     private void InstantiateUnit()
     {
         CleanUnit();

@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 
@@ -251,14 +252,12 @@ public class HungarianAlgorithm2
 
 public static class Utils
 {
-    public enum UnitStatus { WALKING, RUNNING, CHARGING }
+    public enum UnitStatus { IDLE, CHARGING }
     public enum Cardinal { NW, N, NE, E, SE, S, SW, W }
-
 
 
     public static int GetNumRows(int numOfSoldiers, int cols) { return (int)Mathf.Ceil(numOfSoldiers / (float)cols); }
     public static float GetHalfLenght(float dist, int num) { return (num - 1) * dist / 2; }
-
     public static Vector3[] GetEquispacedRow(int cols, float lateralDist, Vector3 pos, Vector3 dir)
     {
         Vector3[] curRow = new Vector3[cols];
@@ -273,7 +272,6 @@ public static class Utils
         public int rowInd, colInd; 
         public FormationIndices(int row, int col) { rowInd = row; colInd = col; } 
     }
-
     public struct FormationResult
     {
         public Vector3[][] positions;   // TODO : remove as obsolete
@@ -288,28 +286,6 @@ public static class Utils
             colsPerRow = cPR;
         }
     }
-
-
-    // TODO : remove this as it is obsolete
-    public static Vector3[][] GetFormationAtPos(Vector3 pos, Vector3 dir, int numOfSoldiers, int cols, float lateralDist, float verticalDist)
-    {
-        dir = dir.normalized;
-        var numOfRows = GetNumRows(numOfSoldiers, cols);
-        int remainingPositions = numOfSoldiers;
-        var halfColLenght = GetHalfLenght(verticalDist, numOfRows);
-
-        var positions = new Vector3[numOfRows][];
-        for (int i = 0; i < numOfRows; i++)
-        {
-            int curRowNum = remainingPositions > cols ? cols : remainingPositions;
-            var curPos = pos + dir * (halfColLenght - i * verticalDist);
-            Vector3[] curRow = GetEquispacedRow(curRowNum, lateralDist, curPos, dir);
-            remainingPositions -= curRowNum;
-            positions[i] = curRow;
-        }
-        return positions;
-    }
-
     public static FormationResult GetFormAtPos(Vector3 pos, Vector3 dir, int numOfSoldiers, int cols, float lateralDist, float verticalDist)
     {
         dir = dir.normalized;
@@ -347,9 +323,6 @@ public static class Utils
 
         return new FormationResult(positions, allPositions, indices, colsPerRow);
     }
-
-
-
     public static int[] LSCAssignment(C_Unit.Soldier[] startPositions, Vector3[] endPositions)
     {
         int length = startPositions.Length;
@@ -378,14 +351,28 @@ public static class Utils
 
 
 
-    public static Vector3 GetVector3Down(Vector3 v) { return v - Vector3.up * v.y; }
+    public static float GetDistanceBetweenUnits(GameObject unit1, GameObject unit2)
+    {
+        List<C_Unit.Soldier> cUnit1 = unit1.GetComponent<C_Unit>().soldiers, cUnit2 = unit2.GetComponent<C_Unit>().soldiers;
+        Vector3 unit1Position = cUnit1.Aggregate(Vector3.zero, (acc, s) => acc + s.go.transform.position) / cUnit1.Count;
+        Vector3 unit2Position = cUnit2.Aggregate(Vector3.zero, (acc, s) => acc + s.go.transform.position) / cUnit2.Count;
+        return Vector3.Distance(unit1Position, unit2Position);
+    }
+    public static float GetDistanceBetweenUnits(Vector3 unit1Position, GameObject unit2)
+    {
+        List<C_Unit.Soldier> cUnit2 = unit2.GetComponent<C_Unit>().soldiers;
+        Vector3 unit2Position = cUnit2.Aggregate(Vector3.zero, (acc, s) => acc + s.go.transform.position) / cUnit2.Count;
+        return Vector3.Distance(unit1Position, unit2Position);
+    }
 
+
+
+    public static Vector3 GetVector3Down(Vector3 v) { return v - Vector3.up * v.y; }
     public static float AngleToTurn(Vector3 targetPos, Vector3 startPos, Vector3 startDirection)
     {
         Vector3 cross = Vector3.Cross(startDirection, (targetPos - startPos).normalized);
         return Mathf.Clamp(cross.y, -1, 1);
     }
-
     public static Vector3 GetMousePosInWorld()
     {
         var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -395,19 +382,6 @@ public static class Utils
         Debug.LogError("Terrain not found on click");
         return Vector3.zero;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     public static void DrawBox(Vector3 origin, Vector3 halfExtents, Quaternion orientation, Color color, float time)
@@ -431,7 +405,6 @@ public static class Utils
         Debug.DrawLine(box.frontBottomRight, box.backBottomRight, color, time);
         Debug.DrawLine(box.frontBottomLeft, box.backBottomLeft, color, time);
     }
-
     public struct Box
     {
         public Vector3 localFrontTopLeft { get; private set; }
@@ -481,7 +454,6 @@ public static class Utils
     {
         return origin + (direction.normalized * hitInfoDistance);
     }
-
     static Vector3 RotatePointAroundPivot(Vector3 point, Vector3 pivot, Quaternion rotation)
     {
         Vector3 direction = point - pivot;

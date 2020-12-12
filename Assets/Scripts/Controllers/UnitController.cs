@@ -30,7 +30,7 @@ public class UnitController : MonoBehaviour
 
     void Start()
     {
-        unitStatus = UnitStatus.RUNNING;
+        unitStatus = UnitStatus.CHARGING;
 
         squareFormation = GetComponentInChildren<SquareFormation>().InitializeFormation(transform.position, transform.rotation.eulerAngles.y, stats.columns, stats.numOfSoldiers, stats.distanceOfSoldiers);
         formationT = transform.GetChild(1);

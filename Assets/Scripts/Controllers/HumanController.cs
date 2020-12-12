@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static C_Unit;
 using static Utils;
 
 
@@ -15,143 +16,143 @@ public class HumanController : MonoBehaviour
 
 
     private bool first = false;
+    private C_Unit unitController;
 
     // Start is called before the first frame update
     void Start()
     {
+        unitController = GetComponent<C_Unit>();
+
     }
+
+
+
+
 
     // Update is called once per frame
     void Update()
     {
-
-
-        if (!Application.isPlaying)
+        if (Input.GetMouseButtonDown(0))
         {
-
-            var enemy = unitToAttack.GetComponent<UnitCreator>();
-            var closestEnemy = enemy.GetSoldiers().OrderBy(es => Vector3.Distance(transform.position, es.transform.position)).First();
-
-
-            var diameter = GetComponent<UnitCreator>().soldierBase.transform.localScale.x;
-            var dir = closestEnemy.transform.position - transform.position;
-            var targetPos = transform.position + dir.normalized * (dir.magnitude);// + diameter);
-
-
-            var rowDir = Vector3.Cross(Vector3.up, dir.normalized);
-            //Debug.DrawLine(transform.position + Vector3.up, closestEnemy.transform.position + Vector3.up, Color.green);
-            //Debug.DrawLine(transform.position + Vector3.up * 2, targetPos + Vector3.up * 2, Color.blue);
-            //Debug.DrawRay(targetPos + Vector3.up * 2, rowDir, Color.blue);
-
-
-            var unit = GetComponent<UnitCreator>();
-            var hl = GetHalfLenght(unit.soldierDistVertical, GetNumRows(unit.numOfSoldiers, unit.cols));
-
-            targetPos = targetPos + (transform.position - targetPos).normalized * hl;
-            var lineAttack = GetFormAtPos(targetPos, dir, unit.numOfSoldiers, unit.cols, unit.soldierDistLateral, unit.soldierDistVertical);
-            foreach (var v in lineAttack.allPositions)
-                    Debug.DrawRay(v + Vector3.up, Vector3.up, Color.red);
-
-
-            targetPos = targetPos + (transform.position - targetPos).normalized * hl;
-
-            var res = GetFormAtPos(targetPos, dir, unit.numOfSoldiers, unit.cols, unit.soldierDistLateral, unit.soldierDistVertical);
-            
-            
-
-
-
-
+            unitController.unitStatus = UnitStatus.CHARGING;
+            unitController.AttackUnit(unitController.enemyUnits.First());
         }
-        else
-        {
-            //var angle = Input.GetAxis("Horizontal");
-            //var speed = Input.GetAxis("Vertical");
-
-            //for (int i = 0; i < transform.childCount; i++)
-            //{
-            //    var rb = transform.GetChild(i).GetComponent<Rigidbody>();
-            //    if (!rb) continue;
-            //    if (rb.velocity.magnitude < 15)
-            //        rb.AddForce(transform.forward * speed * acceleration, ForceMode.Force);
-            //}
-
-            //transform.Rotate(Vector3.up, angle);
-
-            //var soldiers = GetComponent<UnitCreator>().soldiers;
 
 
 
-            // Vector3 mouseClick = GetMousePosInWorld();
-            //if (unitToAttack)
-            //    unitToAttack.GetComponent<UnitController>().MoveAtPos(mouseClick);
-            var unitController = GetComponent<C_Unit>();
+        //if (!Application.isPlaying)
+        //{
 
-            if (!first)
-            {
-                first = true;
-
-                var enemy = unitToAttack.GetComponent<UnitCreator>();
-                var closestEnemy = enemy.GetSoldiers().OrderBy(es => Vector3.Distance(transform.position, es.transform.position)).First();
-                Debug.DrawLine(transform.position + Vector3.up, closestEnemy.transform.position + Vector3.up, Color.green);
+        //    var enemy = unitToAttack.GetComponent<UnitCreator>();
+        //    var closestEnemy = enemy.GetSoldiers().OrderBy(es => Vector3.Distance(transform.position, es.transform.position)).First();
 
 
-                var diameter = GetComponent<UnitCreator>().soldierBase.transform.localScale.x;
-                var dir = closestEnemy.transform.position - transform.position;
-                var targetPos = transform.position + dir.normalized * (dir.magnitude);// + diameter);
-                Debug.DrawLine(transform.position + Vector3.up * 2, targetPos + Vector3.up * 2, Color.blue);
+        //    var diameter = GetComponent<UnitCreator>().soldierBase.transform.localScale.x;
+        //    var dir = closestEnemy.transform.position - transform.position;
+        //    var targetPos = transform.position + dir.normalized * (dir.magnitude);// + diameter);
 
 
-                var rowDir = Vector3.Cross(Vector3.up, dir.normalized);
-                Debug.DrawRay(targetPos + Vector3.up * 2, rowDir, Color.blue);
+        //    var rowDir = Vector3.Cross(Vector3.up, dir.normalized);
+        //    //Debug.DrawLine(transform.position + Vector3.up, closestEnemy.transform.position + Vector3.up, Color.green);
+        //    //Debug.DrawLine(transform.position + Vector3.up * 2, targetPos + Vector3.up * 2, Color.blue);
+        //    //Debug.DrawRay(targetPos + Vector3.up * 2, rowDir, Color.blue);
 
 
-                var unit = GetComponent<UnitCreator>();
-                var hl = GetHalfLenght(unit.soldierDistVertical, GetNumRows(unit.numOfSoldiers, unit.cols));
+        //    var unit = GetComponent<UnitCreator>();
+        //    var hl = GetHalfLenght(unit.soldierDistVertical, GetNumRows(unit.numOfSoldiers, unit.cols));
+
+        //    targetPos = targetPos + (transform.position - targetPos).normalized * hl;
+        //    var lineAttack = GetFormAtPos(targetPos, dir, unit.numOfSoldiers, unit.cols, unit.soldierDistLateral, unit.soldierDistVertical);
+        //    foreach (var v in lineAttack.allPositions)
+        //            Debug.DrawRay(v + Vector3.up, Vector3.up, Color.red);
 
 
-                targetPos = targetPos + (transform.position - targetPos).normalized * hl;
-                var res = GetFormAtPos(targetPos, targetPos - transform.position, unit.numOfSoldiers, unit.cols, unit.soldierDistLateral, unit.soldierDistVertical);
+        //    targetPos = targetPos + (transform.position - targetPos).normalized * hl;
+
+        //    var res = GetFormAtPos(targetPos, dir, unit.numOfSoldiers, unit.cols, unit.soldierDistLateral, unit.soldierDistVertical);
+        //}
+        //else
+        //{
+        //    //var angle = Input.GetAxis("Horizontal");
+        //    //var speed = Input.GetAxis("Vertical");
+
+        //    //for (int i = 0; i < transform.childCount; i++)
+        //    //{
+        //    //    var rb = transform.GetChild(i).GetComponent<Rigidbody>();
+        //    //    if (!rb) continue;
+        //    //    if (rb.velocity.magnitude < 15)
+        //    //        rb.AddForce(transform.forward * speed * acceleration, ForceMode.Force);
+        //    //}
+
+        //    //transform.Rotate(Vector3.up, angle);
+
+        //    //var soldiers = GetComponent<UnitCreator>().soldiers;
+
+
+
+        //    // Vector3 mouseClick = GetMousePosInWorld();
+        //    //if (unitToAttack)
+        //    //    unitToAttack.GetComponent<UnitController>().MoveAtPos(mouseClick);
+        //    var unitController = GetComponent<C_Unit>();
+
+        //    if (!first)
+        //    {
+        //        first = true;
+
+        //        var enemy = unitToAttack.GetComponent<UnitCreator>();
+        //        var closestEnemy = enemy.GetSoldiers().OrderBy(es => Vector3.Distance(transform.position, es.transform.position)).First();
+        //        Debug.DrawLine(transform.position + Vector3.up, closestEnemy.transform.position + Vector3.up, Color.green);
+
+
+        //        var diameter = GetComponent<UnitCreator>().soldierBase.transform.localScale.x;
+        //        var dir = closestEnemy.transform.position - transform.position;
+        //        var targetPos = transform.position + dir.normalized * (dir.magnitude);// + diameter);
+        //        Debug.DrawLine(transform.position + Vector3.up * 2, targetPos + Vector3.up * 2, Color.blue);
+
+
+        //        var rowDir = Vector3.Cross(Vector3.up, dir.normalized);
+        //        Debug.DrawRay(targetPos + Vector3.up * 2, rowDir, Color.blue);
+
+
+        //        var unit = GetComponent<UnitCreator>();
+        //        var hl = GetHalfLenght(unit.soldierDistVertical, GetNumRows(unit.numOfSoldiers, unit.cols));
+
+
+        //        targetPos = targetPos + (transform.position - targetPos).normalized * hl;
+        //        var res = GetFormAtPos(targetPos, targetPos - transform.position, unit.numOfSoldiers, unit.cols, unit.soldierDistLateral, unit.soldierDistVertical);
                 
-                unitController.UpdateTargetPositionOfSoldiers(res, true);
-                unitController.currentFormationResult = res;
-            }
+        //        unitController.UpdateTargetPositionOfSoldiers(res);
+        //        unitController.currentFormationResult = res;
+        //    }
 
 
 
 
 
-            // Check if the current FormationResult has been fulfilled
-            var meandistance = unitController.soldiers.Aggregate(0f, (acc, s) => acc + Vector3.Distance(s.go.transform.position, s.targetPos)) / unitController.soldiers.Count;
+        //    // Check if the current FormationResult has been fulfilled
+        //    var meandistance = unitController.soldiers.Aggregate(0f, (acc, s) => acc + Vector3.Distance(s.go.transform.position, s.targetPos)) / unitController.soldiers.Count;
 
-            if (!charge && meandistance < 0.15f)
-            {
-                charge = true;
+        //    if (!charge && meandistance < 0.15f)
+        //    {
+        //        charge = true;
 
-                for (int j =0; j < unitController.GetNumRows()+1; j++)
-                {
-                    var rowSoldiers = unitController.GetRowOfSoldiers(j).ToArray();
-                    for (int i = 1; i < rowSoldiers.Length; i++)
-                        unitController.AddHindge(rowSoldiers[i - 1].go, rowSoldiers[i].go);
-                    foreach (var g in rowSoldiers)
-                    {
-                        g.isCharging = true;
-                        StartCoroutine(FollowTrajectory(new SoldierTrajectory(g, new Vector3[] { g.go.transform.position + g.go.transform.forward * 4, g.targetPos })));
-                    }
-                }
+        //        for (int j =0; j < unitController.GetNumRowsOfUnit(); j++)
+        //        {
+        //            var rowSoldiers = unitController.GetRowOfSoldiers(j).ToArray();
+        //            for (int i = 1; i < rowSoldiers.Length; i++)
+        //                unitController.AddHindge(rowSoldiers[i - 1].go, rowSoldiers[i].go);
+        //            foreach (var g in rowSoldiers)
+        //            {
+        //                g.isCharging = true;
+        //                StartCoroutine(FollowTrajectory(new SoldierTrajectory(g, new Vector3[] { g.go.transform.position + g.go.transform.forward * 4, g.targetPos })));
+        //            }
+        //        }
 
+        //    }
 
-
-                
-
-
-
-            }
-
-        }
+        //}
 
     }
-    private bool charge;
 
 
     
@@ -177,12 +178,7 @@ public class HumanController : MonoBehaviour
 
     }
 
-    private struct SoldierTrajectory
-    {
-        public C_Unit.Soldier s;
-        public Vector3[] trajectory;
-        public SoldierTrajectory(C_Unit.Soldier s, Vector3[] traj) { this.s = s; trajectory = traj; }
-    }
+    
 
 
 
