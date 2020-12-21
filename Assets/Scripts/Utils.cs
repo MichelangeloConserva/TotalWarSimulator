@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-
+using static Unit;
+using TinySpline;
 
 public class HungarianAlgorithm2
 {
@@ -267,33 +268,44 @@ public static class Utils
     }
 
 
-    public struct FormationIndices 
-    { 
-        public int rowInd, colInd; 
-        public FormationIndices(int row, int col) { rowInd = row; colInd = col; } 
+    public struct FormationIndices
+    {
+        public int rowInd, colInd;
+        public FormationIndices(int row, int col) { rowInd = row; colInd = col; }
     }
     public struct FormationResult
     {
-        public Vector3[][] positions;   // TODO : remove as obsolete
+        public Vector3[][] positions;
         public Vector3[] allPositions;
         public FormationIndices[] indices;
         public int[] colsPerRow;
-        public FormationResult(Vector3[][] pos, Vector3[] allPos, FormationIndices[] inds, int[] cPR) 
-        { 
-            positions = pos; 
-            allPositions = allPos; 
+        public FormationResult(Vector3[][] pos, Vector3[] allPos, FormationIndices[] inds, int[] cPR)
+        {
+            positions = pos;
+            allPositions = allPos;
             indices = inds;
             colsPerRow = cPR;
         }
     }
+
+    public struct FormationCommand
+    {
+        public Vector3[] allPositions;
+        public Soldier[] soldiers;
+        public FormationCommand(Vector3[] allPos, Soldier[] soldiers)
+        {
+            this.soldiers = soldiers;
+            allPositions = allPos;
+        }
+    }
+
+
     public static FormationResult GetFormAtPos(Vector3 pos, Vector3 dir, int numOfSoldiers, int cols, float lateralDist, float verticalDist)
     {
         dir = dir.normalized;
         var numOfRows = GetNumRows(numOfSoldiers, cols);
         int remainingPositions = numOfSoldiers;
         var halfColLenght = GetHalfLenght(verticalDist, numOfRows);
-
-
 
         int[] colsPerRow = new int[numOfRows];
         FormationIndices[] indices = new FormationIndices[numOfSoldiers];
@@ -330,7 +342,7 @@ public static class Utils
         for (int j = 0; j < length; j++)
             for (int k = 0; k < length; k++)
             {
-                int distanceCost = (int)(1000 * Mathf.Pow(Vector3.Distance(startPositions[j].go.transform.position, endPositions[k]),2));
+                int distanceCost = (int)(1000 * Mathf.Pow(Vector3.Distance(startPositions[j].go.transform.position, endPositions[k]), 2));
 
                 Vector3 center = (startPositions[j].go.transform.position + endPositions[k]) * 0.5f;
                 Vector3 dir = startPositions[j].go.transform.position - endPositions[k];
@@ -344,6 +356,38 @@ public static class Utils
 
                 // cost[j, k] = (int)(1000 * Vector3.Distance(startPositions[j].go.transform.position, endPositions[k]));  // Euclidean distance
                 cost[j, k] = distanceCost;
+            }
+
+        return HungarianAlgorithm.HungarianAlgorithm.FindAssignments(cost);
+    }
+
+
+
+    public static int[] LSCAssignment(Vector3[] startPositions, Vector3[] endPositions, Vector3 localScale)
+    {
+        int distanceCost;
+
+        int length = startPositions.Length;
+        int[,] cost = new int[length, length];
+        for (int j = 0; j < length; j++)
+            for (int k = 0; k < length; k++)
+            {
+                distanceCost = (int)(10000 * Mathf.Pow(Vector3.Distance(startPositions[j], endPositions[k]), 2));
+                //distanceCost = (int)(1000 * Vector3.Distance(startPositions[j], endPositions[k]));
+
+
+                //center = (startPositions[j] + endPositions[k]) * 0.5f;
+                //dir = startPositions[j] - endPositions[k];
+                //halfExtends = localScale / 2 + Vector3.forward * dir.magnitude / 2;
+
+                //DrawBox(startPositions[j].go.transform.position, startPositions[j].go.transform.localScale / 2, Quaternion.identity, Color.blue, 3);
+                //DrawBox(endPositions[k], startPositions[j].go.transform.localScale / 2, Quaternion.identity, Color.blue, 3);
+                //DrawBox(center, halfExtends, Quaternion.LookRotation(dir), Color.red, 3);
+
+                // int collisionCost = Physics.OverlapBox(center, halfExtends, Quaternion.LookRotation(dir), LayerMask.GetMask("Soldiers")).Length;
+
+                // cost[j, k] = (int)(1000 * Vector3.Distance(startPositions[j].go.transform.position, endPositions[k]));  // Euclidean distance
+                cost[j, k] = cost[k, j] = distanceCost;
             }
 
         return HungarianAlgorithm.HungarianAlgorithm.FindAssignments(cost);
@@ -458,6 +502,63 @@ public static class Utils
     {
         Vector3 direction = point - pivot;
         return pivot + rotation * direction;
+    }
+
+
+    public static double[] getInterPoints(Vector3 v1, Vector3 v2)
+    {
+        double[] ctrlp = new double[10];
+        ctrlp[0] = v1.x; // x0
+        ctrlp[1] = v1.z;  // y0
+        ctrlp[2] = v1.x* 0.75f + v2.x* 0.25f;  // x1
+        ctrlp[3] = v1.z* 0.75f + v2.z* 0.25f;  // y1
+        ctrlp[4] = v1.x* 0.5f + v2.x* 0.5f;  // x1
+        ctrlp[5] = v1.z* 0.5f + v2.z* 0.5f;  // y1
+        ctrlp[6] = v1.x* 0.25f + v2.x* 0.75f;  // x2
+        ctrlp[7] = v1.z* 0.25f + v2.z* 0.75f;  // y2
+        ctrlp[8] = v2.x;  // x3
+        ctrlp[9] = v2.z;  // y3
+        return ctrlp;
+    }
+
+
+    public static List<Vector3>[] getSpline(IList<double> ctrlp, bool DEBUG_MODE)
+    {
+        List<Vector3> trajectory = new List<Vector3>();
+        List<Vector3> directions = new List<Vector3>();
+
+        BSpline spline = new BSpline((uint)(ctrlp.Count / 2), 2, 4, BSplineType.CLAMPED);
+        spline.ControlPoints = ctrlp;
+
+        float totalDist = Vector3.Distance(new Vector3((float)ctrlp[0], 0, (float)ctrlp[1]), 
+            new Vector3((float)ctrlp[ctrlp.Count - 1], 0, (float)ctrlp[ctrlp.Count - 2]));
+        float interval = Mathf.Max(1 / totalDist, 0.1f);
+
+
+        IList<double> oldResult = spline.Eval(0).Result;
+        Vector3 oldV = new Vector3((float)oldResult[0], 0, (float)oldResult[1]);
+        trajectory.Add(oldV);
+
+        Vector3 newV, curDir;
+        for (float i = 0.01f; i < 1; i += interval)
+        {
+            newV = new Vector3((float)spline.Eval(i).Result[0],0, (float)spline.Eval(i).Result[1]);
+            trajectory.Add(newV);
+            curDir = newV - oldV;
+            directions.Add(curDir);
+
+            if (DEBUG_MODE) Debug.DrawLine(oldV, newV, Color.red, 10);
+
+            oldV = newV;
+        }
+        newV = new Vector3((float)spline.Eval(1).Result[0], 0, (float)spline.Eval(1).Result[1]);
+        trajectory.Add(newV);
+        curDir = newV - oldV;
+        directions.Add(curDir);
+
+        if (DEBUG_MODE) Debug.DrawLine(oldV, newV, Color.red, 10);
+
+        return new List<Vector3>[] { trajectory, directions };
     }
 
 }
