@@ -51,24 +51,24 @@ namespace PathCreation {
  /// <summary> Creates a two-anchor path centred around the given centre point </summary>
  ///<param name="isClosed"> Should the end point connect back to the start point? </param>
  ///<param name="space"> Determines if the path is in 3d space, or clamped to the xy/xz plane </param>
- public BezierPath (Vector3 centre, bool isClosed = false, PathSpace space = PathSpace.xyz) {
+     public BezierPath (Vector3 centre, bool isClosed = false, PathSpace space = PathSpace.xyz) {
 
- Vector3 dir = (space == PathSpace.xz) ? Vector3.forward : Vector3.up;
- float width = 2;
- float controlHeight = .5f;
- float controlWidth = 1f;
- points = new List<Vector3> {
- centre + Vector3.left * width,
- centre + Vector3.left * controlWidth + dir * controlHeight,
- centre + Vector3.right * controlWidth - dir * controlHeight,
- centre + Vector3.right * width
- };
+     Vector3 dir = (space == PathSpace.xz) ? Vector3.forward : Vector3.up;
+     float width = 2;
+     float controlHeight = .5f;
+     float controlWidth = 1f;
+     points = new List<Vector3> {
+     centre + Vector3.left * width,
+     centre + Vector3.left * controlWidth + dir * controlHeight,
+     centre + Vector3.right * controlWidth - dir * controlHeight,
+     centre + Vector3.right * width
+     };
 
- perAnchorNormalsAngle = new List<float> () { 0, 0 };
+     perAnchorNormalsAngle = new List<float> () { 0, 0 };
 
- Space = space;
- IsClosed = isClosed;
-        }
+     Space = space;
+     IsClosed = isClosed;
+            }
 
         /// <summary> Creates a path from the supplied 3D points </summary>
         ///<param name="points"> List or array of points to create the path from. </param>

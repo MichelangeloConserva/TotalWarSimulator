@@ -100,7 +100,7 @@ public class SoldierController : MonoBehaviour
             anim.SetBool("IsMoving", true);
 
 
-            var topSpeed = (unitController.unitStatus == UnitStatus.CHARGING ? stats.topSpeedWalking : stats.topSpeedRunning);
+            var topSpeed = (unitController.unitStatus == UnitState.FIGHTING ? stats.topSpeedWalking : stats.topSpeedRunning);
 
 
             // TODO : Optimize the way you get the mean distance

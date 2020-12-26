@@ -253,8 +253,12 @@ public class HungarianAlgorithm2
 
 public static class Utils
 {
-    public enum UnitStatus { IDLE, CHARGING }
+    // public enum UnitStatus { IDLE, CHARGING }
     public enum Cardinal { NW, N, NE, E, SE, S, SW, W }
+    public enum UnitState { IDLE, MOVING, FIGHTING, ESCAPING }
+    public enum UnitCombactState { ATTACKING, DEFENDING }
+    public enum UnitMovementState { WALKING, RUNNING }
+    public enum ArmyRole { ATTACKER, DEFENDER }
 
 
     public static int GetNumRows(int numOfSoldiers, int cols) { return (int)Mathf.Ceil(numOfSoldiers / (float)cols); }
@@ -287,7 +291,6 @@ public static class Utils
             colsPerRow = cPR;
         }
     }
-
     public struct FormationCommand
     {
         public Vector3[] allPositions;
@@ -299,7 +302,6 @@ public static class Utils
         }
     }
 
-
     public static FormationResult GetFormAtPos(Vector3 pos, Vector3 dir, int numOfSoldiers, int cols, float lateralDist, float verticalDist)
     {
         dir = dir.normalized;
@@ -309,6 +311,8 @@ public static class Utils
 
         int[] colsPerRow = new int[numOfRows];
         FormationIndices[] indices = new FormationIndices[numOfSoldiers];
+
+
         var allPositions = new Vector3[numOfSoldiers];
 
         var positions = new Vector3[numOfRows][];
@@ -335,6 +339,33 @@ public static class Utils
 
         return new FormationResult(positions, allPositions, indices, colsPerRow);
     }
+
+    public static Vector3[] GetFormationAtPos(Vector3 pos, Vector3 dir, int numOfSoldiers, int cols, float lateralDist, float verticalDist)
+    {
+        dir = dir.normalized;
+        var numOfRows = GetNumRows(numOfSoldiers, cols);
+        int remainingPositions = numOfSoldiers;
+        var halfColLenght = GetHalfLenght(verticalDist, numOfRows);
+
+
+        var allPositions = new Vector3[numOfSoldiers];
+
+        int k = 0;
+        for (int i = 0; i < numOfRows; i++)
+        {
+            int curRowNum = remainingPositions > cols ? cols : remainingPositions;
+            var curPos = pos + dir * (halfColLenght - i * verticalDist);
+
+            for (int j = 0; j < cols; j++)
+                allPositions[k++] = curPos - Vector3.Cross(Vector3.up, dir) * ((curRowNum - 1) * lateralDist / 2 - j * lateralDist);
+            
+            remainingPositions -= curRowNum;
+        }
+
+        return allPositions;
+    }
+
+
     public static int[] LSCAssignment(C_Unit.Soldier[] startPositions, Vector3[] endPositions)
     {
         int length = startPositions.Length;
@@ -363,34 +394,21 @@ public static class Utils
 
 
 
-    public static int[] LSCAssignment(Vector3[] startPositions, Vector3[] endPositions, Vector3 localScale)
+    public static int[] LSCAssignment(Vector3[] startPositions, Vector3[] endPositions)
     {
-        int distanceCost;
+        double[,] cost = new double[startPositions.Length, endPositions.Length];
+        for (int i = 0; i < startPositions.Length; i++)
+            for (int j = 0; j < endPositions.Length; j++)
+                cost[i, j] = Vector3.Distance(startPositions[i], endPositions[j]);
+        var res = LinearAssignment.Solver.Solve(cost);
+        return res.ColumnAssignment;
 
-        int length = startPositions.Length;
-        int[,] cost = new int[length, length];
-        for (int j = 0; j < length; j++)
-            for (int k = 0; k < length; k++)
-            {
-                distanceCost = (int)(10000 * Mathf.Pow(Vector3.Distance(startPositions[j], endPositions[k]), 2));
-                //distanceCost = (int)(1000 * Vector3.Distance(startPositions[j], endPositions[k]));
-
-
-                //center = (startPositions[j] + endPositions[k]) * 0.5f;
-                //dir = startPositions[j] - endPositions[k];
-                //halfExtends = localScale / 2 + Vector3.forward * dir.magnitude / 2;
-
-                //DrawBox(startPositions[j].go.transform.position, startPositions[j].go.transform.localScale / 2, Quaternion.identity, Color.blue, 3);
-                //DrawBox(endPositions[k], startPositions[j].go.transform.localScale / 2, Quaternion.identity, Color.blue, 3);
-                //DrawBox(center, halfExtends, Quaternion.LookRotation(dir), Color.red, 3);
-
-                // int collisionCost = Physics.OverlapBox(center, halfExtends, Quaternion.LookRotation(dir), LayerMask.GetMask("Soldiers")).Length;
-
-                // cost[j, k] = (int)(1000 * Vector3.Distance(startPositions[j].go.transform.position, endPositions[k]));  // Euclidean distance
-                cost[j, k] = cost[k, j] = distanceCost;
-            }
-
-        return HungarianAlgorithm.HungarianAlgorithm.FindAssignments(cost);
+        //int length = startPositions.Length;
+        //int[,] cost = new int[length, length];
+        //for (int j = 0; j < length; j++)
+        //    for (int k = 0; k < length; k++)
+        //        cost[j, k] = (int)(1000 * Vector3.Distance(startPositions[j], endPositions[k]));
+        //return HungarianAlgorithm.HungarianAlgorithm.FindAssignments(cost);
     }
 
 
@@ -449,6 +467,9 @@ public static class Utils
         Debug.DrawLine(box.frontBottomRight, box.backBottomRight, color, time);
         Debug.DrawLine(box.frontBottomLeft, box.backBottomLeft, color, time);
     }
+
+
+
     public struct Box
     {
         public Vector3 localFrontTopLeft { get; private set; }

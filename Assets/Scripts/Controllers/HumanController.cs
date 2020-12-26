@@ -34,7 +34,7 @@ public class HumanController : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            unitController.unitStatus = UnitStatus.CHARGING;
+            unitController.unitStatus = UnitState.FIGHTING;
             unitController.AttackUnit(unitController.enemyUnits.First());
         }
 

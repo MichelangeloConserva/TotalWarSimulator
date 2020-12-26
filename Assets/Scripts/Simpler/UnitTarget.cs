@@ -32,7 +32,7 @@ public class UnitTarget : MonoBehaviour
 
         if (!Application.isPlaying)
         {
-            transform.GetChild(0).transform.position = unit.GetPosition();
+            transform.GetChild(0).transform.position = unit.position;
             if (transform.childCount > 0)
             {
                 // Create a new bezier path from the waypoints.
@@ -45,14 +45,13 @@ public class UnitTarget : MonoBehaviour
         }
 
 
-
-            path = pathCreator.path;
+        path = pathCreator.path;
 
         distanceTravelled += speed * Time.deltaTime;
         Vector3 center = path.GetPointAtDistance(distanceTravelled, endOfPathInstruction);
         Vector3 direction = path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
 
-        fr = GetFormAtPos(center, direction, unit.numOfSoldiers, unit.cols, unit.soldierDistLateral, unit.soldierDistVertical);
+        fr = GetFormAtPos(center, direction, unit.numOfSoldiers, unit.cols, unit.stats.soldierDistLateral, unit.stats.soldierDistVertical);
         foreach (var v in fr.allPositions)
         {
             Gizmos.color = Color.yellow;
@@ -75,7 +74,7 @@ public class UnitTarget : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
-        var soldiers = unit.GetSoldiers();
+        var soldiers = unit.soldiers;
         Vector3[] targets = fr.allPositions;
         Vector3[] currents = new Vector3[soldiers.Length];
         for (int i = 0; i < soldiers.Length; i++)
@@ -85,7 +84,7 @@ public class UnitTarget : MonoBehaviour
         //        Solver.Solve(distances);
         
 
-        int[] assignment = LSCAssignment(currents, targets, unit.soldierLocalScale);
+        int[] assignment = LSCAssignment(currents, targets);
 
         for (int i = 0; i < soldiers.Length; i++)
         {

@@ -20,7 +20,7 @@ public class UnitController : MonoBehaviour
     public int team;
     public GameObject soldierPrefab;
     public Stats stats;
-    public UnitStatus unitStatus;
+    public UnitState unitStatus;
     public Transform formationT;
     public GameObject[][] soldiers;
 
@@ -30,7 +30,7 @@ public class UnitController : MonoBehaviour
 
     void Start()
     {
-        unitStatus = UnitStatus.CHARGING;
+        unitStatus = UnitState.FIGHTING;
 
         squareFormation = GetComponentInChildren<SquareFormation>().InitializeFormation(transform.position, transform.rotation.eulerAngles.y, stats.columns, stats.numOfSoldiers, stats.distanceOfSoldiers);
         formationT = transform.GetChild(1);

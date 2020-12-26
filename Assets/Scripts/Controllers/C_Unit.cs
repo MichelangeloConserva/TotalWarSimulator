@@ -43,7 +43,7 @@ public class C_Unit : MonoBehaviour
     }
 
 
-    public UnitStatus unitStatus;
+    public UnitState unitStatus;
     public float targetsUpdateEverySec;
     public UnitStats stats;
 
@@ -69,7 +69,7 @@ public class C_Unit : MonoBehaviour
 
     void Start()
     {
-        unitStatus = UnitStatus.IDLE;
+        unitStatus = UnitState.IDLE;
 
         unitPosition = soldiers.Aggregate(Vector3.zero, (acc, s) => acc + s.go.transform.position) / soldiers.Count;
 
@@ -160,7 +160,7 @@ public class C_Unit : MonoBehaviour
         {
             Vector3 otherUnitPosition = eUnit.GetComponent<C_Unit>().unitPosition;
 
-            if (!currentFightingEnemyUnit && unitStatus == UnitStatus.IDLE && Vector3.Distance(unitPosition, otherUnitPosition) < stats.distanceAfterFacingIncomingEnemy)
+            if (!currentFightingEnemyUnit && unitStatus == UnitState.IDLE && Vector3.Distance(unitPosition, otherUnitPosition) < stats.distanceAfterFacingIncomingEnemy)
             {
                 currentFightingEnemyUnit = eUnit;
                 FaceEnemyUnit(false);

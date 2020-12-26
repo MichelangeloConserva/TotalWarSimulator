@@ -1,141 +1,232 @@
 ﻿using Interpolation;
+using PathCreation;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using static Utils;
-
-
+using Random = UnityEngine.Random;
 
 public class CUnit : MonoBehaviour
 {
+    [Range(0.0f, 5.0f)]
+    public float noise;
+    [Range(0.05f, 1.0f)]
+    public float attackingFactor = 0.9f;
 
-    Unit unit;
-    UnitTarget unitTarget;
+    public PathCreator pathCreator;
+    public EndOfPathInstruction endOfPathInstruction;
+
+    public float distanceTravelled;
+
+
+    VertexPath path;
+    FormationResult fr;
+    public Unit unit;
+
 
     private void Start()
     {
         unit = GetComponent<Unit>();
-
-        StartCoroutine(UpdateAssignmentCO());
-    }
-
-    public void MoveAt(Vector3 targetPos, Vector3 dir, bool reset)
-    {
-        Vector3 start = unit.GetPosition();
-        if (reset)
-        {
-            double[] ctrlp = new double[10];
-            getInterPoints(start, targetPos).CopyTo(ctrlp, 0);
-            MoveAt(ctrlp, true);
-        }
-        else
-        {
-            var ctrlp = getInterPoints(start, unit.targetPos).Concat(getInterPoints(unit.targetPos, targetPos)).ToList();
-            MoveAt(ctrlp, true);
-        }
-        
-        unit.targetPos = targetPos;
-    }
-    private void MoveAt(IList<double> ctrlp, bool reset)
-    {
-        if (reset)
-            foreach (var s in unit.GetSoldiers())
-            {
-                s.Reset(new List<Vector3>() { s.go.transform.position }, new List<FormationIndices>() { s.indices.First() });
-            }
-
-        if (Vector3.Distance(unit.GetPosition(), new Vector3((float)ctrlp[0], unit.GetPosition().y, (float)ctrlp[1])) > 10) // TODO : ENCODE
-        {
-            double[] start = new double[] { unit.GetPosition().x*0.7f + ctrlp[0]*0.3f, unit.GetPosition().z * 0.7f + ctrlp[1] * 0.3f };
-            ctrlp = start.Concat(ctrlp).ToList();
-        }
-
-        FormationResult fr;
-        var res = getSpline(ctrlp, unit.DEBUG_MODE);
-        var trajectory = res[0];
-        var directions = res[1];
-
-        Vector3 lastDir = directions.ElementAt(0);
-        for (int i=0; i<trajectory.Count; i++)
-        {
-            Vector3 curPos = trajectory.ElementAt(i);
-            Vector3 curDir;
-            if (i < directions.Count)  curDir = directions.ElementAt(i);
-            else                       curDir = curPos - trajectory.ElementAt(i-1);
-
-            // bool applyLSA = i==0 || Vector3.Angle(lastDir, curDir) > 35;  // TODO : ENCODE
-            bool applyLSA = true;  // TODO : ENCODE
-            fr = GetFormAtPos(curPos, curDir, unit.numOfSoldiers, unit.cols, unit.soldierDistLateral, unit.soldierDistVertical);
-            UpdateTargetPositionOfSoldiers(fr, applyLSA);
-        }
-    }
-
-    public void MoveAt(Vector3 targetPos, bool reset)
-    {
-        MoveAt(targetPos, (targetPos - unit.GetPosition()).normalized, reset);
     }
 
     public void MoveAt(List<Vector3> traj)
     {
-        double[] ctrlp = new double[traj.Count * 2];
 
-        int k = 0;
-        foreach(var v in traj)
+
+        var colls = Physics.OverlapSphere(traj.Last(), 3, LayerMask.GetMask(unit.army.enemySoldierLayer));
+        if (colls.Length > 0)
         {
-            ctrlp[k++] = v.x;
-            ctrlp[k++] = v.z;
-        }
-
-        MoveAt(ctrlp, true);
-    }
-
-
-
-    public void UpdateTargetPositionOfSoldiers(FormationResult to, bool applyLSA)
-    {
-        var soldiers = unit.GetSoldiers();
-
-        Vector3[] finalPositions = to.allPositions;
-
-        int[] assignment;
-        if (applyLSA)
-        {
-            Vector3[] fromPositions = soldiers.Select(s => s.trajectory.Last()).ToArray(); // using the last position in the trajectory
-            assignment = LSCAssignment(fromPositions, finalPositions, unit.soldierLocalScale);
-            for (int j = 0; j < unit.numOfSoldiers; j++)
-                soldiers.ElementAt(j).Add(finalPositions[assignment[j]], to.indices[assignment[j]]);
+            unit.combactState = UnitCombactState.ATTACKING;
+            unit.commandTarget = colls[0].GetComponentInParent<Unit>();
         }
         else
         {
-            for (int j = 0; j < unit.numOfSoldiers; j++)
-                soldiers.ElementAt(j).Add(finalPositions[j], to.indices[j]);
+            unit.combactState = UnitCombactState.DEFENDING;
+            unit.commandTarget = null;
         }
+
+        if (unit.isInFight)
+            unit.state = UnitState.ESCAPING;
+        else
+            unit.state = UnitState.MOVING;
+
+
+        distanceTravelled = 0;
+        traj.Insert(0, unit.position);
+        pathCreator.bezierPath = new BezierPath(traj, false, PathSpace.xyz);
     }
+    public void MoveAt(Vector3 mouseClick) { MoveAt(new List<Vector3>() { unit.position * 0.5f + mouseClick * 0.5f, mouseClick }); }
 
 
-
-    public IEnumerator UpdateAssignmentCO()
+    public void UnitUpdate()
     {
-        while (true)
+        if (!pathCreator)
         {
-            yield return new WaitForSeconds(3); // TODO : encode
-            //UpdateAssignment();
+            pathCreator = GetComponentInChildren<PathCreator>();
+            pathCreator.transform.position = Vector3.zero;
+            pathCreator.transform.rotation = Quaternion.identity;
+            UpdateFormation(unit.targetPos, unit.targetDirection);
+        }
+
+
+        if (unit.isInFight && unit.state != UnitState.ESCAPING)
+        {
+            // TODO : generalize for all kind of formations
+            // TODO : Add a check so that depending on the unit Update CombactFormation or NotInformtion are called
+            UpdateCombactFormation();
+        }
+        else
+        {
+
+            path = pathCreator.path;
+            if (unit.state == UnitState.MOVING || unit.state == UnitState.ESCAPING)
+            {
+                if (unit.DEBUG_MODE)
+                {
+                    for (int i = 0; i < path.NumPoints; i++)
+                    {
+                        int nextI = i + 1;
+                        if (nextI >= path.NumPoints)
+                            if (false)
+                                nextI %= path.NumPoints;
+                            else
+                                break;
+                        Debug.DrawLine(path.GetPoint(i) + Vector3.up * 3, path.GetPoint(nextI) + Vector3.up * 3, Color.yellow);
+                    }
+                }
+
+                distanceTravelled += unit.stats.pathSpeed * Time.deltaTime;
+                if (path.GetClosestTimeOnPath(unit.position) > 0.97f)
+                {
+                    unit.targetPos = path.GetPointAtDistance(distanceTravelled, endOfPathInstruction) + path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
+                    unit.targetDirection = path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
+                    unit.state = UnitState.IDLE;
+                    foreach (var s in unit.soldiers)
+                        s.targetLookAt = s.targetPos + unit.targetDirection;
+                }
+                else
+                    UpdateFormation(path.GetPointAtDistance(distanceTravelled, endOfPathInstruction), path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction));
+            }
+
+            else if (unit.state == UnitState.IDLE)
+            {
+
+                UpdateFormation(unit.targetPos, unit.targetDirection);
+
+                foreach (var s in unit.soldiers)
+                {
+                    s.targetLookAt = s.position + unit.targetDirection;
+
+                    if (Vector3.Distance(s.go.transform.position, s.targetPos) > 0.5f)
+                        s.Move();
+
+                    // we must do this manually because when getting close to the target pos then the soldiers spins on themselves
+                    s.go.transform.LookAt(s.targetLookAt);
+                }
+            }
+
+        }
+
+    }
+
+
+    private Vector3 formationPos, unitDir;
+    private Vector3[] targets, currents = new Vector3[0];
+    private int[] assignment;
+    private void CalculateAssignments(Vector3 center, Vector3 direction)
+    {
+        targets = GetFormationAtPos(center, direction, unit.numOfSoldiers, unit.cols, unit.stats.soldierDistLateral, unit.stats.soldierDistVertical);
+        if (currents.Length != unit.numOfSoldiers)
+            currents = new Vector3[unit.numOfSoldiers];
+        for (int i = 0; i < unit.numOfSoldiers; i++)
+            currents[i] = unit.soldiers.ElementAt(i).position;
+        assignment = LSCAssignment(currents, targets);
+    }
+    private void UpdateCombactFormation()
+    {
+        if (unit.combactState == UnitCombactState.DEFENDING)
+        {
+            formationPos = unit.targetPos;
+            unitDir = unit.fightingTarget.position - unit.position;
+        }
+        else
+        {
+            var numOfRows = GetNumRows(unit.numOfSoldiers, unit.cols);
+            var ColLength = GetHalfLenght(unit.stats.soldierDistVertical, numOfRows);
+            numOfRows = GetNumRows(unit.fightingTarget.numOfSoldiers, unit.fightingTarget.cols);
+            var EnemyColLength = GetHalfLenght(unit.fightingTarget.stats.soldierDistVertical, numOfRows);
+
+            unitDir = (unit.fightingTarget.position - unit.targetPos).normalized;
+            unitDir *= (ColLength + EnemyColLength) * attackingFactor;
+            formationPos = unit.fightingTarget.position - unitDir;
+        }
+
+
+        CalculateAssignments(formationPos, unitDir);
+        for (int i = 0; i < unit.numOfSoldiers; i++)
+        {
+            var s = unit.soldiers.ElementAt(i);
+
+            // Look at the closest enemy
+            var closer = s.soldiersFightingAgainstDistance.OrderBy(kv => kv.Value).First().Key;
+            s.targetLookAt = GetVector3Down(closer.position) + 0.5f * Vector3.up;
+
+            // Set formation position
+            s.targetPos = GetVector3Down(targets[assignment[i]]) + Vector3.up * 0.5f;
+
+            var dir = closer.position - s.position;
+            RaycastHit hit;
+            if (Physics.Raycast(s.frontPos, dir, out hit, 100, LayerMask.GetMask(unit.fightingTarget.soldierLayerName)))
+            {
+                var dist = hit.distance * 0.8f;
+                if (dist < 0.5f) dist = 0;
+
+                // Lerping between the formation pos and the position for attacking the enemy soldier
+                s.targetPos += dist * (dir).normalized + new Vector3(Random.Range(-noise, noise), 0, Random.Range(-noise, noise));
+
+                if (unit.DEBUG_MODE)
+                    Debug.DrawRay(s.position, s.targetPos - s.position + Vector3.up * 2, Color.magenta);
+            }
+
+            s.Move();
+        }
+    }
+    private void UpdateFormation(Vector3 center, Vector3 direction)
+    {
+        CalculateAssignments(center, direction);
+        for (int i = 0; i < unit.numOfSoldiers; i++)
+        {
+            var s = unit.soldiers.ElementAt(i);
+            s.targetPos = s.targetLookAt = GetVector3Down(targets[assignment[i]]) +  Vector3.up * 0.5f;
+            s.Move();
         }
     }
 
-    public void UpdateAssignment()
+
+    /// <summary>
+    /// It is okay for disorganized fights in which each soldiers just tries to attack the closest enemy
+    /// </summary>
+    private void FightNotInformation()
     {
-        var soldiers = unit.GetSoldiers();
-        Vector3[] targets = soldiers.Select(s => s.trajectory.First()).ToArray();
-        Vector3[] currents = soldiers.Select(s => s.go.transform.position).ToArray();
-        int[] assignment = LSCAssignment(currents, targets, unit.soldierLocalScale);
-
-        for (int j = 0; j < unit.numOfSoldiers; j++)
-            soldiers.ElementAt(j).SwapTrajectory(soldiers.ElementAt(assignment[j]));
+        foreach (var s in unit.soldiers)
+        {
+            var closer = s.soldiersFightingAgainstDistance.OrderBy(kv => kv.Value).First().Key;
+            var dir = closer.position - s.position;
+            RaycastHit hit;
+            if (Physics.Raycast(s.frontPos, dir, out hit))
+            {
+                s.targetLookAt = GetVector3Down(hit.point) + 0.5f * Vector3.up;
+                var dist = hit.distance * 0.8f;
+                if (dist < 0.5f) dist = 0;
+                Debug.Log(dist);
+                s.targetPos = dist * (dir).normalized + s.position + new Vector3(Random.Range(-noise, noise), 0, Random.Range(-noise, noise));
+                Debug.DrawRay(s.position, s.targetPos - s.position + Vector3.up * 2, Color.magenta);
+            }
+            s.Move();
+        }
     }
-
-
 
 
 
