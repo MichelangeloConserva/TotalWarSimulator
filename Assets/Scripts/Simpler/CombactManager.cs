@@ -3,6 +3,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
 using static Utils;
 
@@ -52,7 +54,42 @@ public struct Matrix2DIndices<K, T>
     {
         return indices1.ContainsKey(k) ? GetRow(values, indices1[k]) : GetCol(values, indices2[k]);
     }
+    public void Remove(K k)
+    {
+        if (indices1.ContainsKey(k))
+        {
+            int oldInd = indices1[k];
 
+            T[,] newValues = new T[indices1.Count, indices2.Count];
+            foreach (int row in indices1.Values)
+                foreach (int col in indices2.Values)
+                    newValues[row > oldInd ? row - 1 : row, col] = values[row, col];
+            values = newValues;
+
+            foreach (var kk in indices1.Keys.ToList())
+                if (indices1[kk] > oldInd)
+                    indices1[kk] -= 1;
+            indices1.Remove(k);
+        }
+        else
+        {
+            int oldInd = indices2[k];
+
+            T[,] newValues = new T[indices1.Count, indices2.Count];
+            foreach (int row in indices1.Values)
+                foreach (int col in indices2.Values)
+                    newValues[row, col > oldInd ? col - 1 : col] = values[row, col];
+            values = newValues;
+
+            foreach (var kk in indices2.Keys.ToList())
+                if (indices2[kk] > oldInd)
+                    indices2[kk] -= 1;
+
+            indices2.Remove(k);
+        }
+
+        
+    }
 
     public Matrix2DIndices(IEnumerable<K> k1, IEnumerable<K> k2)
     {
@@ -71,7 +108,7 @@ public struct Matrix2DIndices<K, T>
 
 
 
-[ExecuteInEditMode]
+//[ExecuteInEditMode]
 public class CombactManager : MonoBehaviour
 {
     public Army army1, army2;
@@ -91,7 +128,6 @@ public class CombactManager : MonoBehaviour
         u._hull = new MultiPoint(u.points).ConvexHull().Buffer(1); // TODO : encode this
         u.hullAlreadyUpdated = true;
     }
-
     private bool CheckIfUnitsFighting(Unit u1, Unit u2)
     {
 
@@ -150,7 +186,6 @@ public class CombactManager : MonoBehaviour
 
         //return !u1.hull.Disjoint(u2.hull);
     }
-
     private void PostUpdate()
     {
 
@@ -193,13 +228,66 @@ public class CombactManager : MonoBehaviour
                     Debug.DrawLine(u.position + Vector3.up * 3, u.fightingTarget.position + Vector3.up * 3, Color.cyan);
         }
     }
-
+    private static Dictionary<int, CUnit> cUnitDict;
     private void PreUpdate()
     {
+        //int i = 0;
+        //cUnitDict = allUnits.ToDictionary(u => i++, u => u.cunit);
+
+        //NativeArray<JobHandle> handles = new NativeArray<JobHandle>(allUnits.Count, Allocator.TempJob);
+        //int k = 0;
+        var toRemove = new List<Unit>();
+        foreach (var u in allUnits)
+        {
+            if (u.numOfSoldiers == 0)
+            {
+                DestroyGO(u.gameObject);
+
+                if (units1.Contains(u)) units1.Remove(u);
+                else units2.Remove(u);
+                toRemove.Add(u);
+                bUnitFighting.Remove(u);
+
+                foreach(var o in allUnits)
+                {
+
+                    if (o.fightingTarget == u || o.commandTarget == u)
+                    {
+                        if (o.fightingTarget == u)
+                            o.fightingTarget = null;
+                        if (o.commandTarget == u)
+                            o.commandTarget = null;
+
+                        o.targetPos = o.position;
+                        //o.targetDirection = u.lastPos;
+                        o.combactState = UnitCombactState.DEFENDING;
+                        o.state = UnitState.IDLE;
+                    }
+
+                }
+            }
+        }
+        foreach (var toRem in toRemove)
+            allUnits.Remove(toRem);
+
+
         foreach (var u in allUnits)
             u.cunit.UnitUpdate();
+
+        //JobHandle jh = JobHandle.CombineDependencies(handles);
+        //jh.Complete();
+
     }
 
+    public struct CUnitUpdateJob : IJob
+    {
+        public int cunitID;
+
+        public void Execute()
+        {
+            cUnitDict[cunitID].UnitUpdate();
+        }
+    }
 
 
     private void ResetValues()
@@ -207,7 +295,6 @@ public class CombactManager : MonoBehaviour
 
         foreach(var u in allUnits)
         {
-            u.hullAlreadyUpdated = false;
             foreach (var s in u.soldiers)
                 s.soldiersFightingAgainstDistance.Clear();
         }
@@ -262,16 +349,11 @@ public class CombactManager : MonoBehaviour
 
         PreUpdate();
 
-
-
-
-
-
-
-
-
         // RESET
         ResetValues();
+
+
+
 
         foreach (var u1 in units1)
             foreach (var u2 in units2)

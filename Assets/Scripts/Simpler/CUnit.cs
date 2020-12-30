@@ -8,6 +8,7 @@ using UnityEngine;
 using static Utils;
 using Random = UnityEngine.Random;
 
+
 public class CUnit : MonoBehaviour
 {
     [Range(0.0f, 5.0f)]
@@ -33,7 +34,6 @@ public class CUnit : MonoBehaviour
 
     public void MoveAt(List<Vector3> traj)
     {
-
 
         var colls = Physics.OverlapSphere(traj.Last(), 3, LayerMask.GetMask(unit.army.enemySoldierLayer));
         if (colls.Length > 0)
@@ -62,6 +62,7 @@ public class CUnit : MonoBehaviour
 
     public void UnitUpdate()
     {
+        if (!unit) return;
         if (!pathCreator)
         {
             pathCreator = GetComponentInChildren<PathCreator>();
@@ -71,7 +72,7 @@ public class CUnit : MonoBehaviour
         }
 
 
-        if (unit.isInFight && unit.state != UnitState.ESCAPING)
+        if (unit.isInFight && unit.state != UnitState.ESCAPING && unit.fightingTarget)
         {
             // TODO : generalize for all kind of formations
             // TODO : Add a check so that depending on the unit Update CombactFormation or NotInformtion are called
@@ -97,7 +98,17 @@ public class CUnit : MonoBehaviour
                     }
                 }
 
-                distanceTravelled += unit.stats.pathSpeed * Time.deltaTime;
+
+
+                float averageDist = unit.soldiers.Aggregate(0f, (acc, s) => acc + (s.targetPos - s.position).magnitude) / unit.numOfSoldiers;
+
+                if (averageDist < 3)
+                {
+                    distanceTravelled += unit.stats.pathSpeed * Time.deltaTime * (1 - averageDist / 3);
+                }
+
+
+
                 if (path.GetClosestTimeOnPath(unit.position) > 0.97f)
                 {
                     unit.targetPos = path.GetPointAtDistance(distanceTravelled, endOfPathInstruction) + path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
@@ -107,7 +118,11 @@ public class CUnit : MonoBehaviour
                         s.targetLookAt = s.targetPos + unit.targetDirection;
                 }
                 else
-                    UpdateFormation(path.GetPointAtDistance(distanceTravelled, endOfPathInstruction), path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction));
+                {
+                    unit.targetPos = path.GetPointAtDistance(distanceTravelled, endOfPathInstruction);
+                    unit.targetDirection = path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
+                    UpdateFormation(unit.targetPos, unit.targetDirection);
+                }
             }
 
             else if (unit.state == UnitState.IDLE)
@@ -142,6 +157,7 @@ public class CUnit : MonoBehaviour
             currents = new Vector3[unit.numOfSoldiers];
         for (int i = 0; i < unit.numOfSoldiers; i++)
             currents[i] = unit.soldiers.ElementAt(i).position;
+
         assignment = LSCAssignment(currents, targets);
     }
     private void UpdateCombactFormation()
@@ -162,6 +178,9 @@ public class CUnit : MonoBehaviour
             unitDir *= (ColLength + EnemyColLength) * attackingFactor;
             formationPos = unit.fightingTarget.position - unitDir;
         }
+
+
+
 
 
         CalculateAssignments(formationPos, unitDir);
@@ -185,6 +204,14 @@ public class CUnit : MonoBehaviour
 
                 // Lerping between the formation pos and the position for attacking the enemy soldier
                 s.targetPos += dist * (dir).normalized + new Vector3(Random.Range(-noise, noise), 0, Random.Range(-noise, noise));
+
+                // Fighting
+                if (hit.distance < s.meeleRange)
+                {
+                    var enemy = hit.collider.GetComponent<SoldierUtils>().s;
+                    float damage = Mathf.Max(s.meeleAttack - enemy.meeleDefence, 0);
+                    enemy.health -= (damage + Random.Range(0, 1)) * Time.deltaTime;
+                }
 
                 if (unit.DEBUG_MODE)
                     Debug.DrawRay(s.position, s.targetPos - s.position + Vector3.up * 2, Color.magenta);

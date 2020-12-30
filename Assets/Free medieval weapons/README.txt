@@ -1,0 +1,1 @@
+Thanks so much for downloading my asset pack. If you like it or want to thank me for my efforts, please rate it. If you have suggestions for improving assets, write to my mail: osmanov.nekit@mail.ru. Also look at my other assets in my profile.

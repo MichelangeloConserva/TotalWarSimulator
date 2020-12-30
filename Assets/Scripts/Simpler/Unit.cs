@@ -12,134 +12,7 @@ using Random = UnityEngine.Random;
 public class Unit : MonoBehaviour
 {
 
-
-
-    [System.Serializable]
-    public class Soldier
-    {
-        public GameObject go;
-        public Rigidbody rb;
-
-        public bool isCharging;
-        public float distFromFront;
-        public UnitStats stats;
-        public Vector3 targetPos;
-        public Vector3 targetLookAt;
-        public Dictionary<Soldier, float> soldiersFightingAgainstDistance = new Dictionary<Soldier, float>();
-        public Vector3 frontPos
-        {
-            get
-            {
-                return front.position;
-            }
-        }
-        public Vector3 rightPos
-        {
-            get
-            {
-                return right.position;
-            }
-        }
-        public Vector3 leftPos
-        {
-            get
-            {
-                return left.position;
-            }
-        }
-        public Vector3 position
-        {
-            get
-            {
-                return go.transform.position;
-            }
-        }
-        public Vector3 boxCastCenter
-        {
-            get
-            {
-                return position + go.transform.forward * 2 * distFromFront + Vector3.up * 0.25f;
-            }
-        }
-        public Vector3 boxCastHalfExtends
-        {
-            get
-            {
-                return Vector3.one * 0.3f + Vector3.forward - Vector3.up * 0.2f;
-            }
-        }
-
-
-        private readonly Transform front, right, left;
-        private readonly Unit unit;
-
-        public Soldier(GameObject g, Unit unit)
-        {
-            this.stats = unit.stats;
-            this.unit = unit;
-            go = g;
-            rb = go.GetComponent<Rigidbody>();
-            front = go.transform.GetChild(1); // get the transform of the front handler
-            right = go.transform.GetChild(2); // get the transform of the front handler
-            left = go.transform.GetChild(3); // get the transform of the front handler
-            distFromFront = Vector3.Distance(frontPos, position);
-        }
-        public void Move()
-        {
-            Vector3 p = rb.position;
-
-            if (rb.velocity.magnitude < stats.topSpeed)
-            {
-                float dt = 0.02f;
-
-                Vector3 v = rb.velocity;
-
-                Vector3 force = rb.mass * (targetPos - p - v * dt) / dt;  // TODO : Damping is to taken into account
-
-                rb.AddForce(Vector3.ClampMagnitude(force, stats.movementForce),
-                            isCharging ? ForceMode.Impulse : ForceMode.Force);
-
-
-                if (unit.isInFight)
-                {
-                    var rotation = Quaternion.LookRotation(targetLookAt - position);
-                    go.transform.rotation = Quaternion.Lerp(go.transform.rotation, rotation, Time.deltaTime);
-                }
-                else
-                    go.transform.LookAt(targetLookAt);  
-            }
-
-        }
-
-
-        //public void Move(float speed, float distance)
-        //{
-        //    if (rb.velocity.magnitude < stats.topSpeed)
-        //    {
-        //        float dt = distance / speed;
-
-        //        Vector3 p = rb.position;
-        //        Vector3 v = rb.velocity;
-
-        //        Vector3 force = rb.mass * (targetPos - p - v * dt) / dt;  // TODO : Damping is to taken into account
-
-        //        rb.AddForce(isCharging ? Vector3.ClampMagnitude(force, stats.chargeForce) : Vector3.ClampMagnitude(force, stats.movementForce),
-        //                    isCharging ? ForceMode.Impulse : ForceMode.Force);
-
-        //        go.transform.LookAt(GetVector3Down(targetPos) * Random.Range(0.99f, 1.01f) + Vector3.up * 0.5f);  // TODO : Remove this hard coding here
-        //    }
-        //}
-
-    }
-
-    [System.Serializable]
-    public class UnitStats
-    {
-        public float topSpeed, movementForce, pathSpeed, soldierDistLateral, soldierDistVertical;
-        public int startingCols, startingNumOfSoldiers;
-    }
     public UnitStats stats;
-
 
     [Header("Debug options")]
     public bool DEBUG_MODE;
@@ -154,15 +27,9 @@ public class Unit : MonoBehaviour
     public Unit fightingTarget;
     public Unit commandTarget;
 
-
-
-
-
-
     [Header("Linking")]
     public GameObject pathCreatorGO;
     public GameObject soldierBase;
-
 
     [HideInInspector()]
     public Army army;
@@ -179,12 +46,10 @@ public class Unit : MonoBehaviour
     [HideInInspector()]
     public int cols;
     [HideInInspector()]
-    public int numOfSoldiers;
-    [HideInInspector()]
-    public bool hullAlreadyUpdated;
-    [HideInInspector()]
-    public GameObject[][] soldiersInFormation;
-
+    public int numOfSoldiers
+    {
+        get { return _soldiers.Length; }        
+    }
 
     public string soldierLayerName
     {
@@ -206,10 +71,13 @@ public class Unit : MonoBehaviour
                 }
                 else
                 {
-                    var color = transform.GetChild(1).GetChild(0).GetComponent<MeshRenderer>().material.color;
-                    color.b = 0.21f;
-                    for (int i = 1; i < transform.childCount; i++)
-                        transform.GetChild(i).GetChild(0).GetComponent<MeshRenderer>().material.color = color;
+                    if (transform.childCount > 0)
+                    {
+                        var color = transform.GetChild(1).GetChild(0).GetComponent<MeshRenderer>().material.color;
+                        color.b = 0.21f;
+                        for (int i = 1; i < transform.childCount; i++)
+                            transform.GetChild(i).GetChild(0).GetComponent<MeshRenderer>().material.color = color;
+                    }
                 }
                 _isSelected = value;
             }
@@ -245,7 +113,11 @@ public class Unit : MonoBehaviour
             _inFight = value;
         }
     }
-
+    public Vector3 lastPos
+    {
+        get;
+        private set;
+    }
     
     public Point[] points; // TODO remove points as soldiers die
     private void CalculateHull()
@@ -275,29 +147,28 @@ public class Unit : MonoBehaviour
         combactState = UnitCombactState.DEFENDING;
         movementState = UnitMovementState.WALKING;
 
-        numOfSoldiers = stats.startingNumOfSoldiers;
         cols = stats.startingCols;
-        points = new Point[numOfSoldiers];
+        points = new Point[stats.startingNumOfSoldiers];
 
         CleanUnit();
 
         Instantiate(pathCreatorGO, transform.position, Quaternion.identity, transform).GetComponent<PathCreator>();
 
 
-        var res = GetFormationAtPos(transform.position, transform.forward, numOfSoldiers, cols, stats.soldierDistLateral, stats.soldierDistVertical);
-        _soldiers = new Soldier[numOfSoldiers];
+        var res = GetFormationAtPos(transform.position, transform.forward, stats.startingNumOfSoldiers, cols, stats.soldierDistLateral, stats.soldierDistVertical);
+        _soldiers = new Soldier[stats.startingNumOfSoldiers];
         GameObject g;
         int k = 0;
         foreach (var v in res)
         {
             g = Instantiate(soldierBase, v, transform.rotation, transform);
             g.layer = LayerMask.NameToLayer(soldierLayerName);
-            _soldiers[k++] = new Soldier(g, this);
+            _soldiers[k] = new Soldier(g, this);
+            g.GetComponent<SoldierUtils>().s = _soldiers[k++];
         }
     }
 
     public Geometry _hull;
-    private HashSet<Soldier> _soldiersFightingAgainst;
     private Soldier[] _soldiers;      // TODO : update when soldiers die
     private Dictionary<Unit, bool> bfightingUnit;
     private Vector3 _position;            
@@ -332,7 +203,7 @@ public class Unit : MonoBehaviour
             Gizmos.DrawLine(new Vector3((float)points[0].X, 1, (float)points[0].Y), new Vector3((float)points[points.Length - 1].X, 1, (float)points[points.Length - 1].Y));
         }
     }
-    private void Start()
+    protected void Start()
     {
         army = transform.parent.GetComponent<Army>();
 
@@ -341,7 +212,6 @@ public class Unit : MonoBehaviour
 
         combactManager = army.combactManager;
 
-        _soldiersFightingAgainst = new HashSet<Soldier>();
         targetPos = transform.position;
         targetDirection = transform.forward;
     }
@@ -364,19 +234,31 @@ public class Unit : MonoBehaviour
                 foreach (Soldier s in soldiers)
                     Debug.DrawLine(s.go.transform.position, s.targetPos);
             }
+
         }
     }
+
     private void FixedUpdate()
     {
+
+        // Checking for dead soldiers
+        var l = _soldiers.ToList();
+        foreach (var s in soldiers)
+            if (s.health < 0)
+            {
+                l.Remove(s);
+                StartCoroutine(DestroyGO(s.go));
+            }
+        _soldiers = l.ToArray();
+
+
         //_position = _soldiers.Aggregate(Vector3.zero, (acc, s) => acc + s.go.transform.position) / _soldiers.Length;
         _position = Vector3.zero;
         foreach (var s in soldiers)
             _position += s.position;
         _position /= numOfSoldiers;
+
     }
-
-
-
 
 
 

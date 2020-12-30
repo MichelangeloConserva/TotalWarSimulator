@@ -63,7 +63,7 @@ public class Human : MonoBehaviour
 
         if (Input.GetMouseButtonDown(1) && !Input.GetKey(KeyCode.LeftShift))
         {
-            Vector3 mouseClick = GetMousePosInWorld();
+            mouseClick = GetMousePosInWorld();
             selectedUnit.MoveAt(mouseClick);
         }
 
@@ -110,8 +110,6 @@ public class Human : MonoBehaviour
                 selectedUnit.unit.isSelected = false;
             selectedUnit = null;
         }
-
-
 
     }
 

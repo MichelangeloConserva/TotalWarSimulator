@@ -2,29 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static Unit;
 using static Utils;
 
 public class SoldierUtils : MonoBehaviour
 {
 
-    private CUnit cunit;
-
-
-
-    private void OnDrawGizmos()
-    {
-
-    }
-
-    private void Start()
-    {
-        cunit = GetComponentInParent<CUnit>();
-    }
-
-
-    private void Update()
-    {
-    }
+    public Soldier s;
+    public BaseSoldier sRef;
 
 
 
