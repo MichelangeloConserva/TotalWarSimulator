@@ -9,8 +9,5 @@ public class SoldierUtils : MonoBehaviour
 {
 
     public Soldier s;
-    public BaseSoldier sRef;
-
-
 
 }

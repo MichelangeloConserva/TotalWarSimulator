@@ -7,7 +7,8 @@ using static Utils;
 public class Human : MonoBehaviour
 {
     public RectTransform selectionBox;
-    public string teamID;
+    public ArmyRole team;
+
 
     public List<Vector3> mouseTraj;
 
@@ -122,7 +123,7 @@ public class Human : MonoBehaviour
                                    Vector3.up,
                                    Quaternion.LookRotation(Vector3.up),
                                    900,
-                                   LayerMask.GetMask("unitSoldier" + teamID)
+                                   LayerMask.GetMask("unitSoldier" + ((int)team + 1))
                                );
         if (DEBUG_MODE)
         {

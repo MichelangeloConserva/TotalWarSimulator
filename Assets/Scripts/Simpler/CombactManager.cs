@@ -121,31 +121,26 @@ public class CombactManager : MonoBehaviour
     float colLength1, rowLength1, colLength2, rowLength2, dist;
 
 
-    private void UpdateUnitHull(Unit u)
-    {
-        for (int i = 0; i < u.numOfSoldiers; i++)
-            u.points[i] = new Point(u.soldiers[i].position.x, u.soldiers[i].position.z);
-        u._hull = new MultiPoint(u.points).ConvexHull().Buffer(1); // TODO : encode this
-        u.hullAlreadyUpdated = true;
-    }
     private bool CheckIfUnitsFighting(Unit u1, Unit u2)
     {
+        return !u1.meleeGeom.Disjoint(u2.meleeGeom);
 
-        // TRYING NOT TO USE THE CONVEX HULL
-        numOfRows1 = GetNumRows(u1.numOfSoldiers, u1.cols);
-        colLength1 = 2 * GetHalfLenght(u1.stats.soldierDistVertical, numOfRows1);
-        rowLength1 = 2 * GetHalfLenght(u1.stats.soldierDistLateral, u1.cols);
-        numOfRows2 = GetNumRows(u2.numOfSoldiers, u2.cols);
-        colLength2 = 2 * GetHalfLenght(u2.stats.soldierDistVertical, numOfRows2);
-        rowLength2 = 2 * GetHalfLenght(u2.stats.soldierDistLateral, u2.cols);
 
-        dist = Vector3.Distance(u1.position, u2.position);
-        if (dist <  Mathf.Max(colLength1, colLength2, rowLength1, rowLength2)) // if this two units are close
-        {
-            return true;
+        //// TRYING NOT TO USE THE CONVEX HULL
+        //numOfRows1 = GetNumRows(u1.numOfSoldiers, u1.cols);
+        //colLength1 = 2 * GetHalfLenght(u1.stats.soldierDistVertical, numOfRows1);
+        //rowLength1 = 2 * GetHalfLenght(u1.stats.soldierDistLateral, u1.cols);
+        //numOfRows2 = GetNumRows(u2.numOfSoldiers, u2.cols);
+        //colLength2 = 2 * GetHalfLenght(u2.stats.soldierDistVertical, numOfRows2);
+        //rowLength2 = 2 * GetHalfLenght(u2.stats.soldierDistLateral, u2.cols);
 
-        }
-        return false;
+        //dist = Vector3.Distance(u1.position, u2.position);
+        //if (dist <  Mathf.Max(colLength1, colLength2, rowLength1, rowLength2)) // if this two units are close
+        //{
+        //    return true;
+
+        //}
+        //return false;
 
 
         //numOfRows1 = GetNumRows(u1.numOfSoldiers, u1.cols);

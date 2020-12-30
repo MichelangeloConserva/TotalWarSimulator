@@ -4,6 +4,8 @@ using System.Linq;
 using UnityEngine;
 using static Unit;
 using TinySpline;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.Geometries.Utilities;
 
 public class HungarianAlgorithm2
 {
@@ -366,34 +368,6 @@ public static class Utils
     }
 
 
-    public static int[] LSCAssignment(C_Unit.Soldier[] startPositions, Vector3[] endPositions)
-    {
-        int length = startPositions.Length;
-        int[,] cost = new int[length, length];
-        for (int j = 0; j < length; j++)
-            for (int k = 0; k < length; k++)
-            {
-                int distanceCost = (int)(1000 * Mathf.Pow(Vector3.Distance(startPositions[j].go.transform.position, endPositions[k]), 2));
-
-                Vector3 center = (startPositions[j].go.transform.position + endPositions[k]) * 0.5f;
-                Vector3 dir = startPositions[j].go.transform.position - endPositions[k];
-                Vector3 halfExtends = startPositions[j].go.transform.localScale / 2 + Vector3.forward * dir.magnitude / 2;
-
-                //DrawBox(startPositions[j].go.transform.position, startPositions[j].go.transform.localScale / 2, Quaternion.identity, Color.blue, 3);
-                //DrawBox(endPositions[k], startPositions[j].go.transform.localScale / 2, Quaternion.identity, Color.blue, 3);
-                //DrawBox(center, halfExtends, Quaternion.LookRotation(dir), Color.red, 3);
-
-                // int collisionCost = Physics.OverlapBox(center, halfExtends, Quaternion.LookRotation(dir), LayerMask.GetMask("Soldiers")).Length;
-
-                // cost[j, k] = (int)(1000 * Vector3.Distance(startPositions[j].go.transform.position, endPositions[k]));  // Euclidean distance
-                cost[j, k] = distanceCost;
-            }
-
-        return HungarianAlgorithm.HungarianAlgorithm.FindAssignments(cost);
-    }
-
-
-
     public static int[] LSCAssignment(Vector3[] startPositions, Vector3[] endPositions)
     {
         double[,] cost = new double[startPositions.Length, endPositions.Length];
@@ -412,19 +386,15 @@ public static class Utils
     }
 
 
-
-    public static float GetDistanceBetweenUnits(GameObject unit1, GameObject unit2)
+    private static AffineTransformation translation = new AffineTransformation();
+    private static AffineTransformation rotation = new AffineTransformation();
+    private static AffineTransformation final = new AffineTransformation();
+    public static Polygon UpdateGeometry(Polygon p, float transX, float transY, float deg)
     {
-        List<C_Unit.Soldier> cUnit1 = unit1.GetComponent<C_Unit>().soldiers, cUnit2 = unit2.GetComponent<C_Unit>().soldiers;
-        Vector3 unit1Position = cUnit1.Aggregate(Vector3.zero, (acc, s) => acc + s.go.transform.position) / cUnit1.Count;
-        Vector3 unit2Position = cUnit2.Aggregate(Vector3.zero, (acc, s) => acc + s.go.transform.position) / cUnit2.Count;
-        return Vector3.Distance(unit1Position, unit2Position);
-    }
-    public static float GetDistanceBetweenUnits(Vector3 unit1Position, GameObject unit2)
-    {
-        List<C_Unit.Soldier> cUnit2 = unit2.GetComponent<C_Unit>().soldiers;
-        Vector3 unit2Position = cUnit2.Aggregate(Vector3.zero, (acc, s) => acc + s.go.transform.position) / cUnit2.Count;
-        return Vector3.Distance(unit1Position, unit2Position);
+        if (deg > 0) deg = 360 - deg;
+        if (deg < 0) deg *= -1;
+        final = translation.SetToTranslation(transX, transY).Compose(rotation.SetToRotation(Mathf.Deg2Rad * deg));
+        return (Polygon)final.Transform(p);
     }
 
 

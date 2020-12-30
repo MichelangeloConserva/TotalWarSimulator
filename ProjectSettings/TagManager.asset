@@ -3,7 +3,8 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Arrow
   layers:
   - Default
   - TransparentFX
@@ -17,7 +18,7 @@ TagManager:
   - Soldiers
   - unitSoldier1
   - unitSoldier2
-  - 
+  - Arrow
   - 
   - 
   - 

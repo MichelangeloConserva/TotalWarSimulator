@@ -8,65 +8,78 @@ using Debug = UnityEngine.Debug;
 
 public class prova : MonoBehaviour
 {
-    [Range(5,100)]
-    public int num;
-    [Range(5, 50)]
-    public int cols;
-    public float soldierDistLateral, soldierDistVertical;
+
+    public Transform TargetObjectTF;
+    public GameObject arrow;
+
+    public float LaunchAngle = 45;
+
+    public GameObject instantiatedArrow;
+
+    private Rigidbody rigidbody;
+    private Vector3 initialPosition;
+    private Quaternion initialRotation;
 
 
-
-    private Vector3 formationPos, unitDir;
-    private Vector3[] targets;
-    private int[] assignment;
-    private void CalculateAssignments(Vector3 center, Vector3 direction)
+    private void Start()
     {
-        
-
-
-        //targets = fr.allPositions;
-        //Vector3[] currents = new Vector3[num];
-        //for (int i = 0; i < soldiers.Length; i++)
-        //    currents[i] = soldiers.ElementAt(i).go.transform.position;
-        //assignment = LSCAssignment(currents, targets, unit.soldierLocalScale);
+        instantiatedArrow = Instantiate(arrow, transform.position, Quaternion.Euler(90,0,0));
+        rigidbody = instantiatedArrow.GetComponent<Rigidbody>();
+        rigidbody.constraints = RigidbodyConstraints.FreezeAll;
+        initialPosition = instantiatedArrow.transform.position;
+        initialRotation = instantiatedArrow.transform.rotation;
     }
 
 
-
-
-
-    private void OnDrawGizmos()
+    private void Update()
     {
-
-        var fr = GetFormAtPos(transform.GetChild(0).position, transform.GetChild(0).forward, num, cols, soldierDistLateral, soldierDistVertical);
-        var fr1 = GetFormAtPos(transform.GetChild(1).position, transform.GetChild(1).forward, num, cols, soldierDistLateral, soldierDistVertical);
-
-        //GameObject[] gs = new GameObject[num];
-
-        Gizmos.color = Color.yellow;
-        foreach (var p in fr.allPositions.Concat(fr1.allPositions))
+        if(Input.GetKeyDown(KeyCode.Space))
         {
-            Gizmos.DrawSphere(p, 0.1f);
+            rigidbody.constraints = RigidbodyConstraints.None;
+            Launch();
         }
+        if (Input.GetMouseButtonDown(0))
+            ResetToInitialState();
 
-        var assignment = LSCAssignment(fr.allPositions, fr1.allPositions);
+        //if (rigidbody.velocity.magnitude != 0)
+        //    instantiatedArrow.transform.rotation = Quaternion.LookRotation(rigidbody.velocity);// * initialRotation;
 
+    }
 
-        Gizmos.color = Color.cyan;
-        for (int i=0; i<assignment.Length; i++)
-        {
+    void ResetToInitialState()
+    {
+        rigidbody.velocity = Vector3.zero;
+        rigidbody.constraints = RigidbodyConstraints.FreezeAll;
+        instantiatedArrow.transform.SetPositionAndRotation(initialPosition, initialRotation);
+    }
 
-            Gizmos.DrawLine(fr.allPositions[i], fr1.allPositions[assignment[i]]);
-        }
+    void Launch()
+    {
+        // think of it as top-down view of vectors: 
+        //   we don't care about the y-component(height) of the initial and target position.
+        Vector3 projectileXZPos = new Vector3(transform.position.x, 0.0f, transform.position.z);
+        Vector3 targetXZPos = new Vector3(TargetObjectTF.position.x, 0.0f, TargetObjectTF.position.z);
 
+        // rotate the object to face the target
+        instantiatedArrow.transform.LookAt(targetXZPos);
 
+        // shorthands for the formula
+        float R = Vector3.Distance(projectileXZPos, targetXZPos);
+        float G = Physics.gravity.y;
+        float tanAlpha = Mathf.Tan(LaunchAngle * Mathf.Deg2Rad);
+        float H = TargetObjectTF.position.y - transform.position.y;
 
-        //foreach (var g in gs)
-        //    DestroyImmediate(g);
+        // calculate the local space components of the velocity 
+        // required to land the projectile on the target object 
+        float Vz = Mathf.Sqrt(G * R * R / (2.0f * (H - R * tanAlpha)));
+        float Vy = tanAlpha * Vz;
 
+        // create the velocity vector in local space and get it in global space
+        Vector3 localVelocity = new Vector3(0f, Vy, Vz);
+        Vector3 globalVelocity = instantiatedArrow.transform.TransformDirection(localVelocity);
 
-
-
+        // launch the object by setting its initial velocity and flipping its state
+        rigidbody.velocity = globalVelocity;
     }
 
 
