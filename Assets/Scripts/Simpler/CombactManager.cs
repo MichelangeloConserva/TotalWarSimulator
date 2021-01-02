@@ -44,7 +44,9 @@ public struct Matrix2DIndices<K, T>
     }
     public T GetValue(K k1, K k2)
     {
-        return values[indices1[k1], indices2[k2]];
+        if (indices1.ContainsKey(k1))
+            return values[indices1[k1], indices2[k2]];
+        return values[indices2[k1], indices1[k2]];
     }
     public Dictionary<K,T> GetDictValue(K k)
     {
@@ -115,10 +117,65 @@ public class CombactManager : MonoBehaviour
 
     public List<Unit> units1, units2, allUnits;
     public Matrix2DIndices<Unit,bool> bUnitFighting;
+    //public Matrix2DIndices<Unit,float> unitDistances;
 
 
     int numOfRows1, numOfRows2;
     float colLength1, rowLength1, colLength2, rowLength2, dist;
+
+
+    void Start()
+    {
+        army1.Initialize();
+        army2.Initialize();
+
+        units1 = army1.units.ToList();
+        units2 = army2.units.ToList();
+        allUnits = units1.Concat(units2).ToList();
+
+
+        foreach (var u1 in units1)
+        {
+            u1.isInFight = false;
+        }
+
+        foreach (var u2 in units2)
+        {
+            u2.isInFight = false;
+        }
+
+        bUnitFighting = new Matrix2DIndices<Unit, bool>(units1, units2);
+        foreach (var u1 in units1)
+        {
+            foreach (var u2 in units2)
+            {
+                bUnitFighting.SetValue(u1, u2, false);
+            }
+        }
+
+        //unitDistances = new Matrix2DIndices<Unit, float>(units1, units2);
+
+
+        StartCoroutine(UpdateCombactManager());
+    }
+
+    private void ResetValues()
+    {
+
+        foreach (var u in allUnits)
+        {
+            foreach (var s in u.soldiers)
+                s.soldiersFightingAgainstDistance.Clear();
+        }
+
+        foreach (var u1 in units1)
+        {
+            foreach (var u2 in units2)
+            {
+                bUnitFighting.SetValue(u1, u2, false);
+            }
+        }
+    }
 
 
     private bool CheckIfUnitsFighting(Unit u1, Unit u2)
@@ -274,116 +331,82 @@ public class CombactManager : MonoBehaviour
 
     }
 
-    public struct CUnitUpdateJob : IJob
+
+
+    private WaitForEndOfFrame wfeof;
+    IEnumerator UpdateCombactManager()
     {
-        public int cunitID;
+        wfeof = new WaitForEndOfFrame();
 
-        public void Execute()
+
+        int k = 0;
+        while (true)
         {
-            cUnitDict[cunitID].UnitUpdate();
-        }
-    }
 
-
-    private void ResetValues()
-    {
-
-        foreach(var u in allUnits)
-        {
-            foreach (var s in u.soldiers)
-                s.soldiersFightingAgainstDistance.Clear();
-        }
-
-        foreach (var u1 in units1)
-        {
-            foreach (var u2 in units2)
+            if (k < 5)
             {
-                bUnitFighting.SetValue(u1, u2, false);
+                k++;
+                yield return wfeof;
             }
-        }
-    }
+            else
+                k = 0;
 
 
-    void Start()
-    {
-        army1.Initialize();
-        army2.Initialize();
-
-        units1 = army1.units.ToList();
-        units2 = army2.units.ToList();
-        allUnits = units1.Concat(units2).ToList();
-
-
-        foreach (var u1 in units1)
-        {
-            u1.isInFight = false;
-        }
-
-        foreach (var u2 in units2)
-        {
-            u2.isInFight = false;
-        }
-
-        bUnitFighting = new Matrix2DIndices<Unit, bool>(units1, units2);
-        foreach (var u1 in units1)
-        {
-            foreach (var u2 in units2)
+            if (!Application.isPlaying)
             {
-                bUnitFighting.SetValue(u1, u2, false);
+                Start();
             }
-        }
-    }
-
-    void Update()
-    {
-        if(!Application.isPlaying)
-        {
-            Start();
-        }
 
 
-        PreUpdate();
+            PreUpdate();
 
-        // RESET
-        ResetValues();
+            // RESET
+            ResetValues();
 
 
 
 
-        foreach (var u1 in units1)
-            foreach (var u2 in units2)
-            {
-                if (CheckIfUnitsFighting(u1, u2))
+            foreach (var u1 in units1)
+                foreach (var u2 in units2)
                 {
-                    // Update if fighting
-                    bUnitFighting.SetValue(u1, u2, true);
-                    u1.isInFight = u2.isInFight = true;
+                    //float dist = Vector3.Distance(u1.position, u2.position);
+                    //unitDistances.SetValue(u1, u2, dist);
+                    //if (dist > 20) continue;
 
-                    // Update soldiers fighting against
-                    foreach (var s2 in u2.soldiers)
+                    if (CheckIfUnitsFighting(u1, u2))
                     {
-                        foreach (var s1 in u1.soldiers)
+                        // Update if fighting
+                        bUnitFighting.SetValue(u1, u2, true);
+                        u1.isInFight = u2.isInFight = true;
+
+                        // Update soldiers fighting against
+                        foreach (var s2 in u2.soldiers)
                         {
+                            foreach (var s1 in u1.soldiers)
+                            {
 
-                            bool s1Done = s1.soldiersFightingAgainstDistance.ContainsKey(s2);
-                            bool s2Done = s2.soldiersFightingAgainstDistance.ContainsKey(s1);
+                                bool s1Done = s1.soldiersFightingAgainstDistance.ContainsKey(s2);
+                                bool s2Done = s2.soldiersFightingAgainstDistance.ContainsKey(s1);
 
-                            if (s1Done && s2Done)
-                                continue;
-                            else if (s1Done && !s2Done)
-                                s2.soldiersFightingAgainstDistance[s1] = s1.soldiersFightingAgainstDistance[s2];
-                            else if (!s1Done && s2Done)
-                                s1.soldiersFightingAgainstDistance[s2] = s2.soldiersFightingAgainstDistance[s1];
-                            else
-                                s1.soldiersFightingAgainstDistance[s2] = s2.soldiersFightingAgainstDistance[s1] = Vector3.Distance(s1.go.transform.position, s2.go.transform.position);
+                                if (s1Done && s2Done)
+                                    continue;
+                                else if (s1Done && !s2Done)
+                                    s2.soldiersFightingAgainstDistance[s1] = s1.soldiersFightingAgainstDistance[s2];
+                                else if (!s1Done && s2Done)
+                                    s1.soldiersFightingAgainstDistance[s2] = s2.soldiersFightingAgainstDistance[s1];
+                                else
+                                    s1.soldiersFightingAgainstDistance[s2] = s2.soldiersFightingAgainstDistance[s1] = Vector3.Distance(s1.go.transform.position, s2.go.transform.position);
 
+                            }
                         }
                     }
-                }
-                
-            }
 
-        PostUpdate();
+                }
+
+            PostUpdate();
+        }
+
+        
 
     }
 

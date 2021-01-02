@@ -26,6 +26,9 @@ public class CUnit : MonoBehaviour
     FormationResult fr;
     public Unit unit;
 
+    private Vector3 destDirection;
+    private bool setFinalDirection;
+
 
     private void Start()
     {
@@ -58,6 +61,14 @@ public class CUnit : MonoBehaviour
         pathCreator.bezierPath = new BezierPath(traj, false, PathSpace.xyz);
     }
     public void MoveAt(Vector3 mouseClick) { MoveAt(new List<Vector3>() { unit.position * 0.5f + mouseClick * 0.5f, mouseClick }); }
+
+    public void MoveAt(Vector3 dest, Vector3 destDirection)
+    {
+        this.destDirection = destDirection;
+        setFinalDirection = true;
+        MoveAt(dest);
+    }
+
 
 
     public void UnitUpdate()
@@ -104,7 +115,7 @@ public class CUnit : MonoBehaviour
 
                 if (averageDist < 3)
                 {
-                    distanceTravelled += unit.stats.pathSpeed * Time.deltaTime * (1 - averageDist / 3);
+                    distanceTravelled += unit.meleeStats.pathSpeed * Time.deltaTime * (1 - averageDist / 3);
                 }
 
 
@@ -112,7 +123,10 @@ public class CUnit : MonoBehaviour
                 if (path.GetClosestTimeOnPath(unit.position) > 0.97f)
                 {
                     unit.targetPos = path.GetPointAtDistance(distanceTravelled, endOfPathInstruction) + path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
-                    unit.targetDirection = path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
+                    if (setFinalDirection)
+                        unit.targetDirection = destDirection;
+                    else
+                        unit.targetDirection = path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
                     unit.state = UnitState.IDLE;
                     foreach (var s in unit.soldiers)
                         s.targetLookAt = s.targetPos + unit.targetDirection;
@@ -152,7 +166,9 @@ public class CUnit : MonoBehaviour
     private int[] assignment;
     private void CalculateAssignments(Vector3 center, Vector3 direction)
     {
-        targets = GetFormationAtPos(center, direction, unit.numOfSoldiers, unit.cols, unit.stats.soldierDistLateral, unit.stats.soldierDistVertical);
+
+
+        targets = GetFormationAtPos(center, direction, unit.numOfSoldiers, unit.cols, unit.meleeStats.soldierDistLateral, unit.meleeStats.soldierDistVertical);
         if (currents.Length != unit.numOfSoldiers)
             currents = new Vector3[unit.numOfSoldiers];
         for (int i = 0; i < unit.numOfSoldiers; i++)
@@ -162,6 +178,8 @@ public class CUnit : MonoBehaviour
     }
     private void UpdateCombactFormation()
     {
+
+
         if (unit.combactState == UnitCombactState.DEFENDING)
         {
             formationPos = unit.targetPos;
@@ -170,9 +188,9 @@ public class CUnit : MonoBehaviour
         else
         {
             var numOfRows = GetNumRows(unit.numOfSoldiers, unit.cols);
-            var ColLength = GetHalfLenght(unit.stats.soldierDistVertical, numOfRows);
+            var ColLength = GetHalfLenght(unit.meleeStats.soldierDistVertical, numOfRows);
             numOfRows = GetNumRows(unit.fightingTarget.numOfSoldiers, unit.fightingTarget.cols);
-            var EnemyColLength = GetHalfLenght(unit.fightingTarget.stats.soldierDistVertical, numOfRows);
+            var EnemyColLength = GetHalfLenght(unit.fightingTarget.meleeStats.soldierDistVertical, numOfRows);
 
             unitDir = (unit.fightingTarget.position - unit.targetPos).normalized;
             unitDir *= (ColLength + EnemyColLength) * attackingFactor;

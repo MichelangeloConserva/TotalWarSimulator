@@ -51,7 +51,7 @@ public class UnitTarget : MonoBehaviour
         Vector3 center = path.GetPointAtDistance(distanceTravelled, endOfPathInstruction);
         Vector3 direction = path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
 
-        fr = GetFormAtPos(center, direction, unit.numOfSoldiers, unit.cols, unit.stats.soldierDistLateral, unit.stats.soldierDistVertical);
+        fr = GetFormAtPos(center, direction, unit.numOfSoldiers, unit.cols, unit.meleeStats.soldierDistLateral, unit.meleeStats.soldierDistVertical);
         foreach (var v in fr.allPositions)
         {
             Gizmos.color = Color.yellow;

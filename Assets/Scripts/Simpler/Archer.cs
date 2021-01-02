@@ -9,25 +9,36 @@ using static Utils;
 public class Archer : Unit
 {
 
-    public GameObject arrow;
+    public RangedStats rangedStatReference;
+
+    [HideInInspector()]
     public float arrowDamage;
-
+    [HideInInspector()]
     public bool freeFire;
-    public float range, fireInterval;
+    [HideInInspector()]
+    public float fireInterval;
+    [HideInInspector()]
+    public float range;
 
 
-    Point[] archerRangePoints;
-
-    private Polygon rangedGeom;
     private Unit rangedTarget;
-    
+    private Polygon rangedGeom = new Polygon(new LinearRing(new Coordinate[] { }));
+    private GameObject arrow;
 
 
-    private void Start()
+
+    private new void Start()
     {
         base.Start();
 
-        float rowLength = GetHalfLenght(stats.soldierDistLateral, cols);
+        arrow = rangedStatReference.arrow;
+        arrowDamage = rangedStatReference.rangedHolder.arrowDamage;
+        freeFire = rangedStatReference.rangedHolder.freeFire;
+        fireInterval = rangedStatReference.rangedHolder.fireInterval;
+        range = rangedStatReference.rangedHolder.range;
+
+
+        float rowLength = GetHalfLenght(meleeStats.soldierDistLateral, cols);
 
         var left = transform.position - transform.right * rowLength;
         Coordinate leftPoint = new Coordinate(left.x, left.z);
@@ -53,7 +64,6 @@ public class Archer : Unit
         rangedGeom = new Polygon(new LinearRing(new Coordinate[] { leftPoint, rightPoint, rightPointFront, leftPointFront, leftPoint }));
 
 
-
         if (Application.isPlaying)
             StartCoroutine(FireArrowCoroutine());
 
@@ -71,8 +81,8 @@ public class Archer : Unit
                 Start();
             }
 
-            var c = new Vector3((float)rangedGeom.Coordinates[0].X * 0.5f + (float)rangedGeom.Coordinates[1].X * 0.5f, 0, (float)rangedGeom.Coordinates[0].Y * 0.5f + (float)rangedGeom.Coordinates[1].Y * 0.5f);
-            var cFront = new Vector3((float)rangedGeom.Coordinates[2].X * 0.5f + (float)rangedGeom.Coordinates[3].X * 0.5f, 0, (float)rangedGeom.Coordinates[2].Y * 0.5f + (float)rangedGeom.Coordinates[3].Y * 0.5f);
+            var c = new Vector3((float)coords[0].X * 0.5f + (float)coords[1].X * 0.5f, 0, (float)coords[0].Y * 0.5f + (float)coords[1].Y * 0.5f);
+            var cFront = new Vector3((float)coords[2].X * 0.5f + (float)coords[3].X * 0.5f, 0, (float)coords[2].Y * 0.5f + (float)coords[3].Y * 0.5f);
             Gizmos.DrawSphere(position + Vector3.up * 3, 0.5f);
             Gizmos.DrawRay(position + Vector3.up * 3, targetDirection * 5);
             Gizmos.color = Color.yellow;
@@ -83,8 +93,7 @@ public class Archer : Unit
                 enemyUnitsInRange.Clear();
                 foreach (var e in army.enemy.units)
                 {
-                    e.CreateMeleeGeometry();
-                    if (!e.meleeGeom.Disjoint(rangedGeom))
+                    if (e.numOfSoldiers > 0 && !e.meleeGeom.Disjoint(rangedGeom))
                     {
                         Gizmos.color = Color.red;
                         if (enemyUnitsInRange.Count > 0 && Vector3.Distance(position, e.position) > Vector3.Distance(position, enemyUnitsInRange.First().position))
@@ -100,51 +109,30 @@ public class Archer : Unit
                     Vector3 target = enemyUnitsInRange.First().position + 2 * enemyVelocity;
                     Gizmos.DrawLine(position, target + Vector3.up * 5);
                 }
-
-
-                for (int i = 0; i < rangedGeom.Coordinates.Length - 1; i++)
-                {
-                    Gizmos.DrawLine(new Vector3((float)rangedGeom.Coordinates[i].X, 0, (float)rangedGeom.Coordinates[i].Y),
-                                    new Vector3((float)rangedGeom.Coordinates[i + 1].X, 0, (float)rangedGeom.Coordinates[i + 1].Y));
-                }
             }
-            
 
-
-
-            
-
-
-
-
-
-
-
+            for (int i = 0; i < coords.Length - 1; i++)
+            {
+                Gizmos.DrawLine(new Vector3((float)coords[i].X, 0, (float)coords[i].Y),
+                                new Vector3((float)coords[i + 1].X, 0, (float)coords[i + 1].Y));
+            }
         }
-        
     }
 
 
 
     private List<Unit> enemyUnitsInRange = new List<Unit>();
-
-
-    private new void FixedUpdate()
-    {
-        base.FixedUpdate();
-        UpdateRangedGeom();
-    }
-
     private void UpdateRangedGeom()
     {
-        var c = new Vector3((float)rangedGeom.Coordinates[0].X * 0.5f + (float)rangedGeom.Coordinates[1].X * 0.5f, 0, (float)rangedGeom.Coordinates[0].Y * 0.5f + (float)rangedGeom.Coordinates[1].Y * 0.5f);
-        var cFront = new Vector3((float)rangedGeom.Coordinates[2].X * 0.5f + (float)rangedGeom.Coordinates[3].X * 0.5f, 0, (float)rangedGeom.Coordinates[2].Y * 0.5f + (float)rangedGeom.Coordinates[3].Y * 0.5f);
+        if (rangedGeom.IsEmpty) return;
+
+        coords = rangedGeom.Coordinates;
+        c = new Vector3((float)coords[0].X * 0.5f + (float)coords[1].X * 0.5f, 0, (float)coords[0].Y * 0.5f + (float)coords[1].Y * 0.5f);
+        cFront = new Vector3((float)coords[2].X * 0.5f + (float)coords[3].X * 0.5f, 0, (float)coords[2].Y * 0.5f + (float)coords[3].Y * 0.5f);
         var deg = Vector3.SignedAngle(cFront - c, GetVector3Down(targetDirection), Vector3.up);
 
         rangedGeom = UpdateGeometry(rangedGeom, position.x - c.x, position.z - c.z, deg);
     }
-
-
 
     public float noise = 0.1f, distance = 5;
     public float h = 25;
@@ -152,15 +140,23 @@ public class Archer : Unit
     protected new void Update()
     {
         base.Update();
+        UpdateRangedGeom();
     }
 
-    private void Shoot()
+    private Vector3 CalculateTarget(Unit targetUnit)
     {
-        var enemyVelocity = enemyUnitsInRange.First().GetComponentInChildren<Rigidbody>().velocity;
-        Vector3 target = enemyUnitsInRange.First().position + 2 * enemyVelocity;
+        var enemyVelocity = targetUnit.GetComponentInChildren<Rigidbody>().velocity;
+        return targetUnit.position + 2 * enemyVelocity;
+    }
+
+    private void ShootAt(Unit targetUnit)
+    {
+        Vector3 target = CalculateTarget(targetUnit);//enemyUnitsInRange.First());
 
         foreach (var s in soldiers)
         {
+            if (s.rb.velocity.magnitude > 1) continue;
+
             var g = Instantiate(arrow, s.position + Vector3.up * 2, Quaternion.Euler(90, 0, 0));
             var arr = g.GetComponent<Arrow>();
             arr.damage = arrowDamage;
@@ -177,8 +173,12 @@ public class Archer : Unit
         {
             if (e.meleeGeom != null && rangedGeom != null)
             {
-                if (!e.meleeGeom.Disjoint(rangedGeom))
+
+                if (e.numOfSoldiers > 0 && !e.meleeGeom.Disjoint(rangedGeom))
                 {
+                    Debug.LogFormat("{0} {1} {2}", Vector3.Distance(e.position,position), gameObject.name, e.gameObject.name);
+
+
                     if (enemyUnitsInRange.Count > 0 && Vector3.Distance(position, e.position) > Vector3.Distance(position, enemyUnitsInRange.First().position))
                         enemyUnitsInRange.Insert(0, e);
                     else
@@ -193,21 +193,33 @@ public class Archer : Unit
     private IEnumerator FireArrowCoroutine()
     {
         WaitForSeconds wfs = new WaitForSeconds(fireInterval);
-        yield return wfeof;
+        yield return wfs;
 
         while (true)
         {
             if (isInFight) yield return wfeof;
+
+            if (commandTarget != null)
+            {
+                if (commandTarget.numOfSoldiers > 0 && !commandTarget.meleeGeom.Disjoint(rangedGeom))
+                {
+                    ShootAt(commandTarget);
+                    yield return wfs;
+                }
+            }
+
 
             if (freeFire)
             {
                 FindCloserEnemyInRange();
                 if (enemyUnitsInRange.Count > 0)
                 {
-                    Shoot();
+                    ShootAt(enemyUnitsInRange.First());
                     yield return wfs;
                 }
             }
+
+
             yield return wfeof;
         }
         

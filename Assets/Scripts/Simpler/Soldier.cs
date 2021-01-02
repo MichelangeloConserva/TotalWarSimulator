@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static MeleeStats;
 using static Unit;
 
 [System.Serializable]
@@ -15,10 +16,15 @@ public class Soldier
     public float health;
     public float meeleAttack;
     public float meeleDefence;
-    public UnitStats stats;
+    private readonly float topSpeed;
+
+    public float movementForce { get; }
+
     public Vector3 targetPos;
     public Vector3 targetLookAt;
     public Dictionary<Soldier, float> soldiersFightingAgainstDistance = new Dictionary<Soldier, float>();
+    private Vector3 lastPosition;
+
     public Vector3 frontPos
     {
         get
@@ -44,7 +50,10 @@ public class Soldier
     {
         get
         {
-            return go.transform.position;
+            if (go)
+                return lastPosition = go.transform.position;
+            else
+                return lastPosition;
         }
     }
     public Vector3 boxCastCenter
@@ -65,13 +74,14 @@ public class Soldier
     private readonly Transform front, right, left;
     private readonly Unit unit;
 
-    public Soldier(GameObject g, Unit unit)
+    public Soldier(GameObject g, Unit unit, MeleeStatsHolder stats)
     {
-        meeleRange = unit.stats.meeleRange;
-        health = unit.stats.health;
-        meeleAttack = unit.stats.meeleAttack;
-        meeleDefence = unit.stats.meeleDefence;
-        stats = unit.stats;
+        meeleRange = stats.meeleRange;
+        health = stats.health;
+        meeleAttack = stats.meeleAttack;
+        meeleDefence = stats.meeleDefence;
+        topSpeed = stats.topSpeed;
+        movementForce = stats.movementForce;
         this.unit = unit;
         go = g;
         rb = go.GetComponent<Rigidbody>();
@@ -84,7 +94,7 @@ public class Soldier
     {
         Vector3 p = rb.position;
 
-        if (rb.velocity.magnitude < stats.topSpeed)
+        if (rb.velocity.magnitude < topSpeed)
         {
             float dt = 0.02f;
 
@@ -92,7 +102,7 @@ public class Soldier
 
             Vector3 force = rb.mass * (targetPos - p - v * dt) / dt;  // TODO : Damping is to taken into account
 
-            rb.AddForce(Vector3.ClampMagnitude(force, stats.movementForce),
+            rb.AddForce(Vector3.ClampMagnitude(force, movementForce),
                         isCharging ? ForceMode.Impulse : ForceMode.Force);
 
 

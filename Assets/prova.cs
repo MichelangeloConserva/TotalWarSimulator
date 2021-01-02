@@ -6,81 +6,81 @@ using UnityEngine;
 using static Utils;
 using Debug = UnityEngine.Debug;
 
+[ExecuteInEditMode]
 public class prova : MonoBehaviour
 {
 
-    public Transform TargetObjectTF;
-    public GameObject arrow;
-
-    public float LaunchAngle = 45;
-
-    public GameObject instantiatedArrow;
-
-    private Rigidbody rigidbody;
-    private Vector3 initialPosition;
-    private Quaternion initialRotation;
+    public float range, rowLength;
 
 
-    private void Start()
-    {
-        instantiatedArrow = Instantiate(arrow, transform.position, Quaternion.Euler(90,0,0));
-        rigidbody = instantiatedArrow.GetComponent<Rigidbody>();
-        rigidbody.constraints = RigidbodyConstraints.FreezeAll;
-        initialPosition = instantiatedArrow.transform.position;
-        initialRotation = instantiatedArrow.transform.rotation;
-    }
-
+    public float width, height;
 
     private void Update()
     {
-        if(Input.GetKeyDown(KeyCode.Space))
+
+        //var left = transform.position - transform.right * rowLength;
+        //var right = transform.position + transform.right * rowLength;
+        //var leftFront = transform.position + transform.forward * range - transform.right * rowLength;// * 3f;
+        //var rightFront = transform.position + transform.forward * range + transform.right * rowLength;// * 3f;
+
+
+        //Mesh mesh = GetComponent<MeshFilter>().mesh;
+
+        //Vector3[] vertices = new Vector3[]
+        //{
+        //    left, right, rightFront, leftFront
+        //};
+
+        //mesh.vertices = vertices;
+
+        //mesh.triangles = new int[] { 0, 1, 2, 0, 2, 3 };
+
+        //GetComponent<MeshFilter>().mesh = mesh;
+
+
+        var left = transform.position - transform.right * rowLength;
+        Debug.Log(left);
+
+
+        Mesh mesh = GetComponent<MeshFilter>().mesh;
+
+        Vector3[] vertices = new Vector3[4]
         {
-            rigidbody.constraints = RigidbodyConstraints.None;
-            Launch();
-        }
-        if (Input.GetMouseButtonDown(0))
-            ResetToInitialState();
+            left + new Vector3(0, 1, 0),
+            left + new Vector3(width, 1, 0),
+            left + new Vector3(0, 1, height),
+            left + new Vector3(width, 1, height + 5)
+        };
+        mesh.vertices = vertices;
 
-        //if (rigidbody.velocity.magnitude != 0)
-        //    instantiatedArrow.transform.rotation = Quaternion.LookRotation(rigidbody.velocity);// * initialRotation;
+        int[] tris = new int[6]
+        {
+            // lower left triangle
+            0, 2, 1,
+            // upper right triangle
+            2, 3, 1
+        };
+        mesh.triangles = tris;
+
+        Vector3[] normals = new Vector3[4]
+        {
+            -Vector3.up,
+            -Vector3.up,
+            -Vector3.up,
+            -Vector3.up
+        };
+        mesh.normals = normals;
+
+
+
+        GetComponent<MeshFilter>().mesh = mesh;
+
+
+
 
     }
 
-    void ResetToInitialState()
-    {
-        rigidbody.velocity = Vector3.zero;
-        rigidbody.constraints = RigidbodyConstraints.FreezeAll;
-        instantiatedArrow.transform.SetPositionAndRotation(initialPosition, initialRotation);
-    }
 
-    void Launch()
-    {
-        // think of it as top-down view of vectors: 
-        //   we don't care about the y-component(height) of the initial and target position.
-        Vector3 projectileXZPos = new Vector3(transform.position.x, 0.0f, transform.position.z);
-        Vector3 targetXZPos = new Vector3(TargetObjectTF.position.x, 0.0f, TargetObjectTF.position.z);
-
-        // rotate the object to face the target
-        instantiatedArrow.transform.LookAt(targetXZPos);
-
-        // shorthands for the formula
-        float R = Vector3.Distance(projectileXZPos, targetXZPos);
-        float G = Physics.gravity.y;
-        float tanAlpha = Mathf.Tan(LaunchAngle * Mathf.Deg2Rad);
-        float H = TargetObjectTF.position.y - transform.position.y;
-
-        // calculate the local space components of the velocity 
-        // required to land the projectile on the target object 
-        float Vz = Mathf.Sqrt(G * R * R / (2.0f * (H - R * tanAlpha)));
-        float Vy = tanAlpha * Vz;
-
-        // create the velocity vector in local space and get it in global space
-        Vector3 localVelocity = new Vector3(0f, Vy, Vz);
-        Vector3 globalVelocity = instantiatedArrow.transform.TransformDirection(localVelocity);
-
-        // launch the object by setting its initial velocity and flipping its state
-        rigidbody.velocity = globalVelocity;
-    }
 
 
 }

@@ -5,17 +5,17 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static MeleeStats;
 using static Utils;
 using Random = UnityEngine.Random;
 
 
-[System.Serializable]
-public struct UnitStats
-{
-    public float topSpeed, movementForce, meeleRange, health, meeleDefence, meeleAttack, pathSpeed, soldierDistVertical, soldierDistLateral;
-    public int startingNumOfSoldiers, startingCols; 
-}
-
+//[System.Serializable]
+//public struct UnitStats
+//{
+//    public float topSpeed, movementForce, meeleRange, health, meeleDefence, meeleAttack, pathSpeed, soldierDistVertical, soldierDistLateral;
+//    public int startingNumOfSoldiers, startingCols; 
+//}
 
 
 
@@ -23,8 +23,10 @@ public struct UnitStats
 [ExecuteInEditMode]
 public class Unit : MonoBehaviour
 {
+    public MeleeStats meleeStatReference;
 
-    public UnitStats stats;
+    public MeleeStatsHolder meleeStats;
+
 
     [Header("Debug options")]
     public bool DEBUG_MODE;
@@ -41,7 +43,6 @@ public class Unit : MonoBehaviour
 
     [Header("Linking")]
     public GameObject pathCreatorGO;
-    public GameObject soldierBase;
 
     [HideInInspector()]
     public Army army;
@@ -60,11 +61,10 @@ public class Unit : MonoBehaviour
     [HideInInspector()]
     public int numOfSoldiers
     {
-        get { return _soldiers.Length; }        
+        get { return soldiers == null ? 0 : _soldiers.Length; }        
     }
     [HideInInspector()]
     public Polygon meleeGeom;
-
 
     
     public string soldierLayerName
@@ -145,27 +145,26 @@ public class Unit : MonoBehaviour
     private void InstantiateUnit()
     {
         cunit = GetComponent<CUnit>();
+        meleeStats = meleeStatReference.meleeHolder;
 
         state = UnitState.IDLE;
         combactState = UnitCombactState.DEFENDING;
         movementState = UnitMovementState.WALKING;
-
-        cols = stats.startingCols;
 
         CleanUnit();
 
         Instantiate(pathCreatorGO, transform.position, Quaternion.identity, transform).GetComponent<PathCreator>();
 
 
-        var res = GetFormationAtPos(transform.position, transform.forward, stats.startingNumOfSoldiers, cols, stats.soldierDistLateral, stats.soldierDistVertical);
-        _soldiers = new Soldier[stats.startingNumOfSoldiers];
+        var res = GetFormationAtPos(transform.position, transform.forward, meleeStats.startingNumOfSoldiers, meleeStats.startingCols, meleeStats.soldierDistLateral, meleeStats.soldierDistVertical);
+        _soldiers = new Soldier[meleeStats.startingNumOfSoldiers];
         GameObject g;
         int k = 0;
         foreach (var v in res)
         {
-            g = Instantiate(soldierBase, v, transform.rotation, transform);
+            g = Instantiate(meleeStatReference.soldierPrefab, v, transform.rotation, transform);
             g.layer = LayerMask.NameToLayer(soldierLayerName);
-            _soldiers[k] = new Soldier(g, this);
+            _soldiers[k] = new Soldier(g, this, meleeStats);
             g.GetComponent<SoldierUtils>().s = _soldiers[k++];
         }
 
@@ -174,7 +173,7 @@ public class Unit : MonoBehaviour
 
     public void CreateMeleeGeometry()
     {
-        float exp = 2f;
+        float exp = 1.5f;
         var points = _soldiers.Select(s => new Point(s.position.x + exp * s.go.transform.forward.x, s.position.z + exp * s.go.transform.forward.z))
              .Concat(_soldiers.Select(s => new Point(s.position.x + exp * s.go.transform.right.x, s.position.z + exp * s.go.transform.right.z)))
              .Concat(_soldiers.Select(s => new Point(s.position.x - exp * s.go.transform.right.x, s.position.z - exp * s.go.transform.right.z)))
@@ -207,13 +206,14 @@ public class Unit : MonoBehaviour
 
 
             if (!Application.isPlaying)
-                Start();
+                Initialize();
 
 
             if (isInFight)
                 Gizmos.color = Color.red;
             else
                 Gizmos.color = Color.green;
+
 
             int i = 0;
             for (i = 0; i < meleeGeom.Coordinates.Length - 1; i++)
@@ -232,9 +232,6 @@ public class Unit : MonoBehaviour
     {
         army = transform.parent.GetComponent<Army>();
 
-        if (!Application.isPlaying)
-            bfightingUnit = army.enemy.transform.GetComponentsInChildren<Unit>().ToDictionary(u => u, u => false);
-
         combactManager = army.combactManager;
 
         targetPos = transform.position;
@@ -245,12 +242,11 @@ public class Unit : MonoBehaviour
     {
         if (!Application.isPlaying)
         {
-            bfightingUnit = transform.parent.GetComponent<Army>().enemy.transform.GetComponentsInChildren<Unit>().ToDictionary(u => u, u => false);
 
             if (updateFormationInEditor)
                 InstantiateUnit();
 
-            if (_soldiers.Length > 0)
+            if (_soldiers != null && _soldiers.Length > 0)
                 _position = _soldiers.Aggregate(Vector3.zero, (acc, s) => acc + s.go.transform.position) / _soldiers.Length;
         }
         else
@@ -262,25 +258,43 @@ public class Unit : MonoBehaviour
             }
 
         }
-    }
 
-    protected void FixedUpdate()
-    {
         CheckForDeadSoldiers();
+        if (numOfSoldiers == 0) return;
+
         UpdatePosition();
         UpdateMeleeGeom();
+
+        if(commandTarget)
+        {
+            UpdateTrajectory();
+        }
+
+
     }
 
+    private void UpdateTrajectory()
+    {
+        cunit.MoveAt(commandTarget.position);
+    }
+
+    private HashSet<Soldier> deads = new HashSet<Soldier>();
     private void CheckForDeadSoldiers()
     {
-        var l = _soldiers.ToList();
+        if (soldiers == null) return;
+
+        deads.Clear();
         foreach (var s in soldiers)
             if (s.health < 0)
             {
-                l.Remove(s);
+                deads.Add(s);
                 StartCoroutine(DestroyGO(s.go));
             }
-        _soldiers = l.ToArray();
+        if (deads.Count > 0)
+        {
+            _soldiers = soldiers.Where(s => !deads.Contains(s)).ToArray();
+        }
+
     }
 
     private void UpdatePosition()
@@ -292,17 +306,21 @@ public class Unit : MonoBehaviour
         _position /= numOfSoldiers;
     }
 
+    protected Point centroid;
+    protected Coordinate[] coords;
+    protected Vector3 c, cFront;
     private void UpdateMeleeGeom()
     {
-        var c = new Vector3((float)meleeGeom.Centroid.X, 0, (float)meleeGeom.Centroid.Y);
-        int i = meleeGeom.Coordinates.Length / 2;
-        var cFront = new Vector3((float)meleeGeom.Coordinates[i].X * 0.5f + (float)meleeGeom.Coordinates[i + 1].X * 0.5f, 0,
-            (float)meleeGeom.Coordinates[i].Y * 0.5f + (float)meleeGeom.Coordinates[i + 1].Y * 0.5f);
+        centroid = meleeGeom.Centroid;
+        coords = meleeGeom.Coordinates;
 
+        c = new Vector3((float)centroid.X, 0, (float)centroid.Y);
+        int i = coords.Length / 2;
+        cFront = new Vector3((float)coords[i].X * 0.5f + (float)coords[i + 1].X * 0.5f, 0,
+            (float)coords[i].Y * 0.5f + (float)coords[i + 1].Y * 0.5f);
+        var deg = Vector3.SignedAngle(cFront - c, GetVector3Down(targetDirection), Vector3.up);
 
-        //var deg = Vector3.SignedAngle(cFront - c, GetVector3Down(targetDirection), Vector3.up);
-
-        var deg = 0;
+        //if(Mathf.Abs(deg) > 1 || Mathf.Abs(position.x - c.x) > 1 || Mathf.Abs(position.z - c.z) > 1)
         meleeGeom = UpdateGeometry(meleeGeom, position.x - c.x, position.z - c.z, deg);
     }
 

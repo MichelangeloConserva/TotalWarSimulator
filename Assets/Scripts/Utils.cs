@@ -391,10 +391,25 @@ public static class Utils
     private static AffineTransformation final = new AffineTransformation();
     public static Polygon UpdateGeometry(Polygon p, float transX, float transY, float deg)
     {
-        if (deg > 0) deg = 360 - deg;
-        if (deg < 0) deg *= -1;
-        final = translation.SetToTranslation(transX, transY).Compose(rotation.SetToRotation(Mathf.Deg2Rad * deg));
-        return (Polygon)final.Transform(p);
+        bool changed = false;
+        final = final.SetToIdentity();
+
+        if (Mathf.Abs(deg)>3)
+        {
+            if (deg > 0) deg = 360 - deg;
+            if (deg < 0) deg *= -1;
+            final = final.Compose(rotation.SetToRotation(Mathf.Deg2Rad * deg));
+            changed = true;
+        }
+        if (Mathf.Abs(transY) > 2 || Mathf.Abs(transX) > 2)
+        {
+            changed = true;
+            final = final.Compose(translation.SetToTranslation(transX, transY));
+        }
+
+        //final = translation.SetToTranslation(transX, transY).Compose(rotation.SetToRotation(Mathf.Deg2Rad * deg));
+
+        return changed ? (Polygon)final.Transform(p) : p;
     }
 
 

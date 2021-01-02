@@ -19,13 +19,14 @@ public class Human : MonoBehaviour
     private Vector3 diff;
 
 
-
     void Start()
     {
     }
 
     void Update()
     {
+        if(selectedUnit && selectedUnit.unit.numOfSoldiers == 0)
+            selectedUnit = null;
 
 
         // SELECTION
