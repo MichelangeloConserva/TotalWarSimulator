@@ -18,13 +18,10 @@ using Random = UnityEngine.Random;
 //}
 
 
-
-
 [ExecuteInEditMode]
 public class Unit : MonoBehaviour
 {
     public MeleeStats meleeStatReference;
-
     public MeleeStatsHolder meleeStats;
 
 
