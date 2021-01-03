@@ -10,8 +10,6 @@ public class UnitNew : MonoBehaviour
 {
 
 
-    [Header("Debug options")]
-    public bool DEBUG_MODE;
 
     [Header("Unit state")]
     public UnitState state;
@@ -26,6 +24,7 @@ public class UnitNew : MonoBehaviour
 
 
     public List<SoldierNew> soldiers;
+    public HashSet<UnitNew> fightingAgainst = new HashSet<UnitNew>();
 
     public ArmyNew army;
 
@@ -60,17 +59,10 @@ public class UnitNew : MonoBehaviour
                 }
                 else
                 {
-                    try
-                    {
-                        if (transform.childCount > 0)
-                        {
-                            var color = soldiers.First().transform.GetChild(0).GetComponent<MeshRenderer>().material.color;
-                            color.b = 0.21f;
-                            foreach (var s in soldiers)
-                                s.transform.GetChild(0).GetComponent<MeshRenderer>().material.color = color;
-                        }
-                    }
-                    finally { }
+                    var color = soldiers.First().transform.GetChild(0).GetComponent<MeshRenderer>().material.color;
+                    color.b = 0.21f;
+                    foreach (var s in soldiers)
+                        s.transform.GetChild(0).GetComponent<MeshRenderer>().material.color = color;
 
                 }
                 _isSelected = value;
@@ -97,34 +89,49 @@ public class UnitNew : MonoBehaviour
     }
     public Vector3 position
     {
-        get { return transform.position; }
+        get { return _position; }
         set { transform.position = value; }
     }
     public Vector3 direction
     {
-        get { return transform.forward; }
+        get { return _direction; }
         set { transform.rotation = Quaternion.LookRotation(value); }
+    }
+    private Vector3 _position, _direction;
+
+    protected void OnDrawGizmos()
+    {
+        if (!army.DEBUG_MODE) return;
+
+        Gizmos.DrawSphere(position + Vector3.up * 5, 0.1f);
+        Gizmos.DrawRay(position + Vector3.up * 5, direction);
+
+        Gizmos.color = Color.red;
+        foreach (var s in soldiers)
+        {
+            Gizmos.DrawRay(s.position, s.direction);
+            Gizmos.DrawLine(s.position, s.targetPos);
+        }     
     }
 
 
+    #region INSTATIONATION STUFF    
     public void Instantiate(Vector3 pos, Vector3 dir, MeleeStatsHolder meleeStats, Transform soldiersHolder, GameObject soldierPrefab, ArmyNew army)
     {
+        position = pos;
+        direction = dir;
 
         SetLinks(meleeStats, army);
         InstantiateSoldiers(pos, dir, meleeStats, soldierPrefab, soldiersHolder);
 
-
         var pC = new GameObject("PathCreator").AddComponent<PathCreator>();
-        pC.transform.parent = transform;
-        pC.transform.position = Vector3.zero;
-        pC.transform.rotation = Quaternion.identity;
+        pC.transform.parent = army.pathCreatorsHolder.transform;
+        //pC.transform.localPosition = Vector3.zero;
+        //pC.transform.localRotation = Quaternion.identity;
 
         cunit = gameObject.AddComponent<CUnitNew>();
         cunit.Initialize(this, pC);
-
     }
-
-
     private void SetLinks(MeleeStatsHolder meleeStats, ArmyNew army)
     {
         this.army = army;
@@ -143,13 +150,19 @@ public class UnitNew : MonoBehaviour
             g = Instantiate(soldierPrefab, p, Quaternion.LookRotation(dir), soldiersHolder);
             g.layer = LayerMask.NameToLayer(soldierLayerName);
             var s = g.GetComponent<SoldierNew>();
-            s.Initialize(this, meleeStats);
+            s.Initialize(this, meleeStats, pos, dir);
             soldiers.Add(s);
         }
     }
+    #endregion
 
 
 
+    private void Update()
+    {
+        _position = transform.position;
+        _direction = transform.forward;
+    }
 
 
 

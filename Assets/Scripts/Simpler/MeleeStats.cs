@@ -17,6 +17,11 @@ public class MeleeStats : MonoBehaviour
         public float pathSpeed;
         public float soldierDistVertical;
         public float soldierDistLateral;
+        [Range(0.0f, 5.0f)]
+        public float noise;
+        [Range(0.05f, 1.0f)]
+        public float attackingFactor;
+
 
         public int startingNumOfSoldiers;
         public int startingCols;

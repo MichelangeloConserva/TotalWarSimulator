@@ -424,7 +424,7 @@ public static class Utils
     {
         var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
-        if (Physics.Raycast(ray, out hit))
+        if (Physics.Raycast(ray, out hit, 10000, LayerMask.GetMask("Terrain")))
             return GetVector3Down(hit.point);
         Debug.LogError("Terrain not found on click");
         return Vector3.zero;
@@ -441,11 +441,11 @@ public static class Utils
 
 
     private const float GIZMO_DISK_THICKNESS = 0.01f;
-    public static void DrawGizmoDisk(Transform t, float radius)
+    public static void DrawGizmoDisk(Vector3 pos, float radius)
     {
         Matrix4x4 oldMatrix = Gizmos.matrix;
         Gizmos.color = new Color(0.2f, 0.2f, 0.2f, 0.5f); //this is gray, could be anything
-        Gizmos.matrix = Matrix4x4.TRS(t.position, t.rotation, new Vector3(1, GIZMO_DISK_THICKNESS, 1));
+        Gizmos.matrix = Matrix4x4.TRS(pos, Quaternion.LookRotation(Vector3.forward), new Vector3(1, GIZMO_DISK_THICKNESS, 1));
         Gizmos.DrawSphere(Vector3.zero, radius);
         Gizmos.matrix = oldMatrix;
     }
@@ -586,4 +586,69 @@ public static class Utils
         return new List<Vector3>[] { trajectory, directions };
     }
 
+
+
+
+    static Texture2D _whiteTexture;
+    public static Texture2D WhiteTexture
+    {
+        get
+        {
+            if (_whiteTexture == null)
+            {
+                _whiteTexture = new Texture2D(1, 1);
+                _whiteTexture.SetPixel(0, 0, Color.white);
+                _whiteTexture.Apply();
+            }
+
+            return _whiteTexture;
+        }
+    }
+
+    public static Rect GetScreenRect(Vector3 screenPosition1, Vector3 screenPosition2)
+    {
+        // Move origin from bottom left to top left
+        screenPosition1.y = Screen.height - screenPosition1.y;
+        screenPosition2.y = Screen.height - screenPosition2.y;
+        // Calculate corners
+        var topLeft = Vector3.Min(screenPosition1, screenPosition2);
+        var bottomRight = Vector3.Max(screenPosition1, screenPosition2);
+        // Create Rect
+        return Rect.MinMaxRect(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y);
+    }
+
+    public static Bounds GetViewportBounds(Camera camera, Vector3 screenPosition1, Vector3 screenPosition2)
+    {
+        var v1 = camera.ScreenToViewportPoint(screenPosition1);
+        var v2 = camera.ScreenToViewportPoint(screenPosition2);
+        var min = Vector3.Min(v1, v2);
+        var max = Vector3.Max(v1, v2);
+        min.z = camera.nearClipPlane;
+        max.z = camera.farClipPlane;
+        //min.z = 0.0f;
+        //max.z = 1.0f;
+
+        var bounds = new Bounds();
+        bounds.SetMinMax(min, max);
+        return bounds;
+    }
+
+    public static void DrawScreenRect(Rect rect, Color color)
+    {
+        GUI.color = color;
+        GUI.DrawTexture(rect, WhiteTexture);
+        GUI.color = Color.white;
+    }
+
+    public static void DrawScreenRectBorder(Rect rect, float thickness, Color color)
+    {
+        // Top
+        Utils.DrawScreenRect(new Rect(rect.xMin, rect.yMin, rect.width, thickness), color);
+        // Left
+        Utils.DrawScreenRect(new Rect(rect.xMin, rect.yMin, thickness, rect.height), color);
+        // Right
+        Utils.DrawScreenRect(new Rect(rect.xMax - thickness, rect.yMin, thickness, rect.height), color);
+        // Bottom
+        Utils.DrawScreenRect(new Rect(rect.xMin, rect.yMax - thickness, rect.width, thickness), color);
+    }
 }

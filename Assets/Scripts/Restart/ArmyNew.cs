@@ -19,22 +19,31 @@ public class ArmyNew : MonoBehaviour
 {
 
     public ArmyRole role;
+    public GameObject selectionCirclePrefab;
     public CombactManager combactManager;
-    public ArmyNew enemy;
     public Transform soldiersHolder;
+    public Transform pathCreatorsHolder;
+    public ArmyNew enemy;
 
     [Header("ArmyComposition")]
     public List<MeleeStats> infantry;
     public List<MeleeStats> cavalry;
     public List<RangedUnitStats> archers;
 
+    public bool DEBUG_MODE;
+
+    public List<UnitNew> units;
 
     private Vector3[] res;
 
 
     public string enemySoldierLayer
     {
-        get { return "unitSoldier" + ((int)role + 1); }
+        get { return "unitSoldier" + ((int)enemy.role + 1); }
+    }
+    public string allyUnitLayer
+    {
+        get { return "unit" + ((int)role + 1); }
     }
 
 
@@ -51,6 +60,8 @@ public class ArmyNew : MonoBehaviour
 
     public void InstantiateArmy(bool debug = false)
     {
+        int k = 0;
+        units = new List<UnitNew>(infantry.Count + archers.Count + cavalry.Count);
         infantryUnits = new GameObject[infantry.Count];
         archerUnits = new GameObject[archers.Count];
         cavalryUnits = new GameObject[cavalry.Count];
@@ -100,21 +111,31 @@ public class ArmyNew : MonoBehaviour
                 curUnit.transform.position = curPos;
                 curUnit.transform.rotation = Quaternion.Euler(transform.forward);
                 curUnit.transform.parent = transform;
+                curUnit.layer = LayerMask.NameToLayer(allyUnitLayer);
+
+                var unitMB = curUnit.AddComponent<UnitNew>();
+                unitMB.Instantiate(curPos, transform.forward, infantry.ElementAt(i).meleeHolder, soldiersHolder, infantry.ElementAt(i).soldierPrefab, this);
+
+                infantryUnits[i] = curUnit;
+                units.Add(unitMB);
 
                 float curLength = GetHalfLenght(u.soldierDistLateral, u.startingCols);
                 float frontExp = GetHalfLenght(u.soldierDistVertical, u.startingNumOfSoldiers / u.startingCols) + expansion;
                 float latExp = curLength + expansion;
 
-                var bColl = curUnit.AddComponent<BoxCollider>();
-                bColl.size = new Vector3(2*latExp, 2, 2*frontExp);
+                var meleeCollider = new GameObject("MeleeCollider");
+                meleeCollider.transform.parent = curUnit.transform;
+                meleeCollider.transform.localPosition = Vector3.zero;
+                meleeCollider.AddComponent<MeleeCollider>().unit = unitMB;
+                meleeCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
+                var bColl = meleeCollider.AddComponent<BoxCollider>();
+                bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
                 bColl.isTrigger = true;
+                var rb = meleeCollider.AddComponent<Rigidbody>();
+                rb.isKinematic = true;
+                rb.useGravity = false;
 
 
-
-                var unitMB = curUnit.AddComponent<UnitNew>();
-                unitMB.Instantiate(curPos, transform.forward, infantry.ElementAt(i).meleeHolder, soldiersHolder, infantry.ElementAt(i).soldierPrefab, this);
-                
-                infantryUnits[i] = curUnit;
             }
 
         }
@@ -180,12 +201,27 @@ public class ArmyNew : MonoBehaviour
             curUnit.transform.position = leftCavPos;
             curUnit.transform.rotation = Quaternion.Euler(transform.forward);
             curUnit.transform.parent = transform;
-            var bColl = curUnit.AddComponent<BoxCollider>();
-            bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
-            bColl.isTrigger = true;
+
+
             var unitMB = curUnit.AddComponent<UnitNew>();
             unitMB.Instantiate(leftCavPos, transform.forward, cavalry.First().meleeHolder, soldiersHolder, cavalry.First().soldierPrefab, this);
             cavalryUnits[0] = curUnit;
+            units.Add(unitMB);
+
+            var meleeCollider = new GameObject("MeleeCollider");
+            meleeCollider.transform.parent = curUnit.transform;
+            meleeCollider.transform.localPosition = Vector3.zero;
+            meleeCollider.AddComponent<MeleeCollider>().unit = unitMB;
+            meleeCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
+            var bColl = meleeCollider.AddComponent<BoxCollider>();
+            bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
+            bColl.isTrigger = true;
+            var rb = meleeCollider.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.useGravity = false;
+
+
+
 
 
             curLength = GetHalfLenght(rightCav.soldierDistLateral, rightCav.startingCols);
@@ -195,12 +231,25 @@ public class ArmyNew : MonoBehaviour
             curUnit.transform.position = RightCavPos;
             curUnit.transform.rotation = Quaternion.Euler(transform.forward);
             curUnit.transform.parent = transform;
-            bColl = curUnit.AddComponent<BoxCollider>();
-            bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
-            bColl.isTrigger = true;
+
             unitMB = curUnit.AddComponent<UnitNew>();
             unitMB.Instantiate(RightCavPos, transform.forward, cavalry.Last().meleeHolder, soldiersHolder, cavalry.Last().soldierPrefab, this);
             cavalryUnits[0] = curUnit;
+            units.Add(unitMB);
+
+
+            meleeCollider = new GameObject("MeleeCollider");
+            meleeCollider.transform.parent = curUnit.transform;
+            meleeCollider.transform.localPosition = Vector3.zero;
+            meleeCollider.AddComponent<MeleeCollider>().unit = unitMB;
+            meleeCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
+            bColl = meleeCollider.AddComponent<BoxCollider>();
+            bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
+            bColl.isTrigger = true;
+            rb = meleeCollider.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.useGravity = false;
+
         }
 
         float archerLenght = 2 * GetHalfLenght(archers.First().meleeStats.meleeHolder.soldierDistVertical, archers.First().meleeStats.meleeHolder.startingCols);
@@ -240,6 +289,12 @@ public class ArmyNew : MonoBehaviour
                 Gizmos.DrawLine(frontRight + Vector3.up, frontLeft + Vector3.up);
                 Gizmos.DrawLine(backLeft + Vector3.up, frontLeft + Vector3.up);
                 Gizmos.DrawLine(backRight + Vector3.up, frontRight + Vector3.up);
+
+                var rs = archers.ElementAt(i).rangedStats.rangedHolder;
+                DrawGizmoDisk(curPos, rs.range);
+
+
+
             }
             else
             {
@@ -251,30 +306,57 @@ public class ArmyNew : MonoBehaviour
                 float curLength = GetHalfLenght(u.meleeHolder.soldierDistLateral, u.meleeHolder.startingCols);
                 float frontExp = GetHalfLenght(u.meleeHolder.soldierDistVertical, u.meleeHolder.startingNumOfSoldiers / u.meleeHolder.startingCols) + expansion;
                 float latExp = curLength + expansion;
-                var bColl = curUnit.AddComponent<BoxCollider>();
-                bColl.size = new Vector3(2*latExp, 2, 2*frontExp);
-                bColl.isTrigger = true;
+
 
                 var unitMB = curUnit.AddComponent<ArcherNew>();
                 unitMB.Instantiate(curPos, transform.forward, u.meleeHolder, soldiersHolder, u.soldierPrefab, this);
-
                 archerUnits[i] = curUnit;
+                units.Add(unitMB);
+
+                var rs = archers.ElementAt(i).rangedStats.rangedHolder;
+                unitMB.range = rs.range;
+                unitMB.arrowDamage = rs.arrowDamage;
+                unitMB.fireInterval = rs.fireInterval;
+                unitMB.freeFire = rs.freeFire;
+                unitMB.arrow = archers.ElementAt(i).rangedStats.arrow;
+
+
+                var rangedCollider = new GameObject("RangedCollider");
+                rangedCollider.transform.parent = curUnit.transform;
+                rangedCollider.transform.localPosition = Vector3.zero;
+                rangedCollider.AddComponent<RangedCollider>().unit = unitMB;
+                rangedCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
+                var cColl = rangedCollider.AddComponent<SphereCollider>();
+                cColl.radius = rs.range;
+                cColl.isTrigger = true;
+                var rb = rangedCollider.AddComponent<Rigidbody>();
+                rb.isKinematic = true;
+                rb.useGravity = false;
+
+
+                var meleeCollider = new GameObject("MeleeCollider");
+                meleeCollider.transform.parent = curUnit.transform;
+                meleeCollider.transform.localPosition = Vector3.zero;
+                meleeCollider.AddComponent<MeleeCollider>().unit = unitMB;
+                meleeCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
+                var bColl = meleeCollider.AddComponent<BoxCollider>();
+                bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
+                bColl.isTrigger = true;
+                rb = meleeCollider.AddComponent<Rigidbody>();
+                rb.isKinematic = true;
+                rb.useGravity = false;
+
+
+
+                var sc = Instantiate(selectionCirclePrefab, curUnit.transform);
+                sc.GetComponent<Projector>().orthographicSize = rs.range + 5;
+
+
             }
 
         }
 
 
-    }
-
-
-
-
-
-
-
-    private void Start()
-    {
-        InstantiateArmy();
     }
 
 

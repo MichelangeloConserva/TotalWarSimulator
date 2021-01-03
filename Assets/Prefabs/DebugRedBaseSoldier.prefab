@@ -55,7 +55,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 116
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!114 &703739787306121112
 MonoBehaviour:
@@ -133,7 +133,7 @@ SphereCollider:
   m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 0.5, z: 0}
 --- !u!114 &3856434615697534165
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -146,6 +146,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1596a433c230f3c45bd73a2a3a76c9a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  unit: {fileID: 0}
+  rb: {fileID: 0}
+  targetPos: {x: 0, y: 0, z: 0}
+  targetLookAt: {x: 0, y: 0, z: 0}
+  isCharging: 0
+  distFromFront: 0
+  meeleRange: 0
+  health: 0
+  meeleAttack: 0
+  meeleDefence: 0
+  topSpeed: 0
+  movementForce: 0
 --- !u!1 &4535407430639260962
 GameObject:
   m_ObjectHideFlags: 0

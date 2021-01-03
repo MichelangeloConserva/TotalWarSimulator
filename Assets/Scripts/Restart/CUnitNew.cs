@@ -69,22 +69,17 @@ public class CUnitNew : MonoBehaviour
 
 
 
+    //public void CalculateVariablesBeforeScheduling()
+    //{
+    //    path = pathCreator.path;
+    //}
+
+
     public void UnitUpdate()
     {
-        if (!unit) return;
-        if (!pathCreator)
-        {
-            pathCreator = GetComponentInChildren<PathCreator>();
-            pathCreator.transform.position = Vector3.zero;
-            pathCreator.transform.rotation = Quaternion.identity;
-            UpdateFormation(unit.position, unit.direction);
-        }
-
 
         if (unit.isInFight && unit.state != UnitState.ESCAPING && unit.fightingTarget)
         {
-            // TODO : generalize for all kind of formations
-            // TODO : Add a check so that depending on the unit Update CombactFormation or NotInformtion are called
             UpdateCombactFormation();
         }
         else
@@ -93,7 +88,7 @@ public class CUnitNew : MonoBehaviour
             path = pathCreator.path;
             if (unit.state == UnitState.MOVING || unit.state == UnitState.ESCAPING)
             {
-                if (unit.DEBUG_MODE)
+                if (unit.army.DEBUG_MODE)
                 {
                     for (int i = 0; i < path.NumPoints; i++)
                     {
@@ -150,7 +145,7 @@ public class CUnitNew : MonoBehaviour
                         s.Move();
 
                     // we must do this manually because when getting close to the target pos then the soldiers spins on themselves
-                    s.direction = s.targetLookAt;
+                    //s.gameObject.transform.LookAt(s.targetLookAt);
                 }
             }
 
@@ -164,8 +159,6 @@ public class CUnitNew : MonoBehaviour
     private int[] assignment;
     private void CalculateAssignments(Vector3 center, Vector3 direction)
     {
-
-
         targets = GetFormationAtPos(center, direction, unit.numOfSoldiers, unit.numCols, unit.soldierDistLateral, unit.soldierDistVertical);
         if (currents.Length != unit.numOfSoldiers)
             currents = new Vector3[unit.numOfSoldiers];
@@ -175,14 +168,9 @@ public class CUnitNew : MonoBehaviour
         assignment = LSCAssignment(currents, targets);
     }
 
-    private Vector3[] GetFormationAtPos(Vector3 center, Vector3 direction, int numOfSoldiers, int cols, float soldierDistLateral, float soldierDistVertical)
-    {
-        throw new System.NotImplementedException();
-    }
 
     private void UpdateCombactFormation()
     {
-
 
         if (unit.combactState == UnitCombactState.DEFENDING)
         {
@@ -202,22 +190,18 @@ public class CUnitNew : MonoBehaviour
         }
 
 
-
-
-
         CalculateAssignments(formationPos, unitDir);
         for (int i = 0; i < unit.numOfSoldiers; i++)
         {
             var s = unit.soldiers.ElementAt(i);
 
             // Look at the closest enemy
-            var closer = s.soldiersFightingAgainstDistance.OrderBy(kv => kv.Value).First().Key;
-            s.targetLookAt = GetVector3Down(closer.position) + 0.5f * Vector3.up;
+            s.targetLookAt = GetVector3Down(s.enemySoldierPosition) ;//+ 0.5f * Vector3.up;
 
             // Set formation position
-            s.targetPos = GetVector3Down(targets[assignment[i]]) + Vector3.up * 0.5f;
+            s.targetPos = GetVector3Down(targets[assignment[i]]) ;//+ 0.5f * Vector3.up;
 
-            var dir = closer.position - s.position;
+            var dir = s.enemySoldierPosition - s.position;
             RaycastHit hit;
             if (Physics.Raycast(s.frontPos, dir, out hit, 100, LayerMask.GetMask(unit.fightingTarget.soldierLayerName)))
             {
@@ -230,12 +214,12 @@ public class CUnitNew : MonoBehaviour
                 // Fighting
                 if (hit.distance < s.meeleRange)
                 {
-                    var enemy = hit.collider.GetComponent<SoldierUtils>().s;
+                    var enemy = hit.collider.GetComponent<SoldierNew>();
                     float damage = Mathf.Max(s.meeleAttack - enemy.meeleDefence, 0);
                     enemy.health -= (damage + Random.Range(0, 1)) * Time.deltaTime;
                 }
 
-                if (unit.DEBUG_MODE)
+                if (unit.army.DEBUG_MODE)
                     Debug.DrawRay(s.position, s.targetPos - s.position + Vector3.up * 2, Color.magenta);
             }
 
@@ -248,7 +232,7 @@ public class CUnitNew : MonoBehaviour
         for (int i = 0; i < unit.numOfSoldiers; i++)
         {
             var s = unit.soldiers.ElementAt(i);
-            s.targetPos = s.targetLookAt = GetVector3Down(targets[assignment[i]]) + Vector3.up * 0.5f;
+            s.targetPos = s.targetLookAt = GetVector3Down(targets[assignment[i]]) ;//+ 0.5f * Vector3.up;
             s.Move();
         }
     }
@@ -266,7 +250,7 @@ public class CUnitNew : MonoBehaviour
             RaycastHit hit;
             if (Physics.Raycast(s.frontPos, dir, out hit))
             {
-                s.targetLookAt = GetVector3Down(hit.point) + 0.5f * Vector3.up;
+                s.targetLookAt = GetVector3Down(hit.point) ;//+ 0.5f * Vector3.up;
                 var dist = hit.distance * 0.8f;
                 if (dist < 0.5f) dist = 0;
                 Debug.Log(dist);

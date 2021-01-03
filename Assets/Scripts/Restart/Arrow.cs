@@ -40,7 +40,7 @@ public class Arrow : MonoBehaviour
         else  // hit a soldier
         {
             transform.parent = collision.gameObject.transform.GetChild(0).transform;
-            transform.GetComponentInParent<SoldierUtils>().s.health -= damage;
+            collision.gameObject.GetComponent<SoldierNew>().health -= damage;
         }
 
         Destroy(gameObject, destroyAfter);

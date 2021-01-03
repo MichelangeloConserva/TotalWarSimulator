@@ -68,7 +68,6 @@ public class HumanNew : MonoBehaviour
             mouseClick = GetMousePosInWorld();
             selectedUnit.MoveAt(mouseClick);
         }
-
     }
 
 

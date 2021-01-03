@@ -306,12 +306,14 @@ MonoBehaviour:
     topSpeed: 10
     movementForce: 2500
     meeleRange: 1.5
-    health: 50
+    health: 100
     meeleDefence: 5
-    meeleAttack: 15
+    meeleAttack: 10
     pathSpeed: 3
     soldierDistVertical: 1
     soldierDistLateral: 1
+    noise: 1.53
+    attackingFactor: 0.415
     startingNumOfSoldiers: 20
     startingCols: 5
 --- !u!4 &235599257
@@ -372,9 +374,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   role: 1
+  selectionCirclePrefab: {fileID: 166266, guid: dc884a6ec589ce249acc9b5326859165,
+    type: 3}
   combactManager: {fileID: 0}
-  enemy: {fileID: 2057375787}
   soldiersHolder: {fileID: 806723427}
+  pathCreatorsHolder: {fileID: 1406710225}
+  enemy: {fileID: 2057375787}
   infantry:
   - {fileID: 235599256}
   - {fileID: 235599256}
@@ -391,6 +396,8 @@ MonoBehaviour:
     rangedStats: {fileID: 1760734142}
   - meleeStats: {fileID: 1760734143}
     rangedStats: {fileID: 1760734142}
+  DEBUG_MODE: 0
+  units: []
   infantryUnits:
   - {fileID: 0}
   - {fileID: 0}
@@ -498,7 +505,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 676475568}
   m_LocalRotation: {x: 0.3093158, y: 0, z: 0, w: 0.9509594}
-  m_LocalPosition: {x: 0.9, y: 11.21, z: -42.7}
+  m_LocalPosition: {x: -11.98, y: 11.21, z: -42.7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -580,6 +587,22 @@ PrefabInstance:
     - target: {fileID: 11496292, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
       propertyPath: m_audioModuleState
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 22424132, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.20019531
+      objectReference: {fileID: 0}
+    - target: {fileID: 22439978, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.20019531
+      objectReference: {fileID: 0}
+    - target: {fileID: 22445198, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.20019531
+      objectReference: {fileID: 0}
+    - target: {fileID: 22450346, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.20019531
       objectReference: {fileID: 0}
     - target: {fileID: 22451668, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
       propertyPath: m_LocalPosition.x
@@ -665,6 +688,28 @@ PrefabInstance:
       propertyPath: m_Pivot.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 22460488, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.20019531
+      objectReference: {fileID: 0}
+    - target: {fileID: 22465754, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.20019531
+      objectReference: {fileID: 0}
+    - target: {fileID: 22477518, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.20019531
+      objectReference: {fileID: 0}
+    - target: {fileID: 224000010243477314, guid: 0abab5bb77339e4428787a870eb31bd3,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.20019531
+      objectReference: {fileID: 0}
+    - target: {fileID: 224000010937413736, guid: 0abab5bb77339e4428787a870eb31bd3,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
 --- !u!1 &1109027688
@@ -702,12 +747,14 @@ MonoBehaviour:
     topSpeed: 10
     movementForce: 2500
     meeleRange: 1.5
-    health: 50
+    health: 100
     meeleDefence: 5
-    meeleAttack: 15
+    meeleAttack: 10
     pathSpeed: 3
     soldierDistVertical: 1
     soldierDistLateral: 1
+    noise: 1.53
+    attackingFactor: 0.415
     startingNumOfSoldiers: 20
     startingCols: 5
 --- !u!4 &1109027690
@@ -757,7 +804,7 @@ MonoBehaviour:
   arrow: {fileID: 1959729250425484, guid: 5187dfa4d8f19524e8bbf7c6894b7de7, type: 3}
   rangedHolder:
     arrowDamage: 10
-    range: 20
+    range: 18
     fireInterval: 5
     freeFire: 1
 --- !u!114 &1210832655
@@ -779,11 +826,13 @@ MonoBehaviour:
     movementForce: 2500
     meeleRange: 1.5
     health: 50
-    meeleDefence: 5
-    meeleAttack: 15
+    meeleDefence: 3
+    meeleAttack: 5
     pathSpeed: 4
     soldierDistVertical: 1.5
     soldierDistLateral: 1.5
+    noise: 4
+    attackingFactor: 0.693
     startingNumOfSoldiers: 20
     startingCols: 5
 --- !u!4 &1210832656
@@ -841,6 +890,8 @@ MonoBehaviour:
     pathSpeed: 9
     soldierDistVertical: 2
     soldierDistLateral: 1.2
+    noise: 4
+    attackingFactor: 0.693
     startingNumOfSoldiers: 20
     startingCols: 5
 --- !u!4 &1329298833
@@ -873,7 +924,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1358005957
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -886,8 +937,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 193bf22a9a31ad745b75c68e91517331, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  selectionBox: {fileID: 0}
-  team: 0
+  selectionBox: {fileID: 141595456}
+  team: 1
   mouseTraj: []
   selectedUnit: {fileID: 0}
 --- !u!4 &1358005958
@@ -899,6 +950,36 @@ Transform:
   m_GameObject: {fileID: 1358005956}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 17.399778, y: 24.684265, z: -1.6832013}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 15
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1406710224
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1406710225}
+  m_Layer: 0
+  m_Name: PathCreatorHolder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1406710225
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1406710224}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -1038,6 +1119,8 @@ MonoBehaviour:
     pathSpeed: 9
     soldierDistVertical: 2
     soldierDistLateral: 1.2
+    noise: 4
+    attackingFactor: 0.693
     startingNumOfSoldiers: 20
     startingCols: 5
 --- !u!4 &1534108752
@@ -1087,7 +1170,7 @@ MonoBehaviour:
   arrow: {fileID: 1959729250425484, guid: 5187dfa4d8f19524e8bbf7c6894b7de7, type: 3}
   rangedHolder:
     arrowDamage: 10
-    range: 20
+    range: 18
     fireInterval: 5
     freeFire: 1
 --- !u!114 &1760734143
@@ -1109,11 +1192,13 @@ MonoBehaviour:
     movementForce: 2500
     meeleRange: 1.5
     health: 50
-    meeleDefence: 5
-    meeleAttack: 15
+    meeleDefence: 3
+    meeleAttack: 5
     pathSpeed: 4
     soldierDistVertical: 1.5
     soldierDistLateral: 1.5
+    noise: 4
+    attackingFactor: 0.693
     startingNumOfSoldiers: 20
     startingCols: 5
 --- !u!4 &1760734144
@@ -1129,6 +1214,53 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1821241129
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1821241131}
+  - component: {fileID: 1821241130}
+  m_Layer: 0
+  m_Name: Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1821241130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1821241129}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f8f738094fd9194f95f79c45204149f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  attacker: {fileID: 2057375787}
+  defender: {fileID: 625914213}
+  unitsAttacker: []
+  unitsDefender: []
+--- !u!4 &1821241131
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1821241129}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 16
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1874998227
 GameObject:
@@ -1326,9 +1458,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   role: 0
+  selectionCirclePrefab: {fileID: 166266, guid: dc884a6ec589ce249acc9b5326859165,
+    type: 3}
   combactManager: {fileID: 0}
-  enemy: {fileID: 625914213}
   soldiersHolder: {fileID: 806723427}
+  pathCreatorsHolder: {fileID: 1406710225}
+  enemy: {fileID: 625914213}
   infantry:
   - {fileID: 1109027689}
   - {fileID: 1109027689}
@@ -1345,6 +1480,8 @@ MonoBehaviour:
     rangedStats: {fileID: 1210832654}
   - meleeStats: {fileID: 1210832655}
     rangedStats: {fileID: 1210832654}
+  DEBUG_MODE: 0
+  units: []
   infantryUnits:
   - {fileID: 0}
   - {fileID: 0}
