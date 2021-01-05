@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 using static MeleeStats;
 using static Utils;
 
@@ -13,7 +14,16 @@ public class SoldierNew : MonoBehaviour
     public Dictionary<Soldier, float> soldiersFightingAgainstDistance = new Dictionary<Soldier, float>();
 
     public Vector3 enemySoldierPosition;
-    public Vector3 targetPos;
+    public Vector3 targetPos 
+    { 
+        get { return _targetPos; } 
+        set
+        {
+            _targetPos = value;
+            agent.SetDestination(value);
+        } 
+    }
+    private Vector3 _targetPos;
     public Vector3 targetLookAt;
 
     public bool isCharging;
@@ -48,9 +58,11 @@ public class SoldierNew : MonoBehaviour
         }
     }
 
-
+    private NavMeshAgent agent;
     public void Initialize(UnitNew u, MeleeStatsHolder stats, Vector3 targetPos, Vector3 targetLookAt)
     {
+        agent = GetComponent<NavMeshAgent>();
+        rb = GetComponent<Rigidbody>();
         this.targetPos = targetPos;
         this.targetLookAt = targetLookAt;
         unit = u;
@@ -60,7 +72,6 @@ public class SoldierNew : MonoBehaviour
         meeleDefence = stats.meeleDefence;
         topSpeed = stats.topSpeed;
         movementForce = stats.movementForce;
-        rb = GetComponent<Rigidbody>();
         front = transform.GetChild(1); // get the transform of the front handler
         mass = rb.mass;
     }
@@ -103,8 +114,8 @@ public class SoldierNew : MonoBehaviour
             {
                 data.bUpdate = false;
 
-                rb.AddForce(Vector3.ClampMagnitude(data.force, movementForce),
-                            isCharging ? ForceMode.Impulse : ForceMode.Force);
+                //rb.AddForce(Vector3.ClampMagnitude(data.force, movementForce),
+                //            isCharging ? ForceMode.Impulse : ForceMode.Force);
 
                 if (unit.isInFight)
                 {
@@ -126,58 +137,49 @@ public class SoldierNew : MonoBehaviour
 
 
     private bool letItPass;
-    //private void OnCollisionStay(Collision collision)
-    //{
-    //    if (collision.gameObject.layer == gameObject.layer && collision.gameObject.GetComponent<SoldierNew>().unit != unit && !unit.isInFight)
-    //    {
-    //        rb.AddForce( GetVector3Down((collision.GetContact(0).point - transform.position).normalized) * movementForce + GetRandomVectorXZ(movementForce/5));
-    //        letItPass = true;
-    //        Debug.DrawRay(collision.GetContact(0).point, Vector3.up * 10);
-    //    }
-    //}
 
     public float radius;
     public int allyCollision = 0;
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.layer != gameObject.layer) return;
+    //private void OnCollisionEnter(Collision collision)
+    //{
+    //    if (collision.gameObject.layer != gameObject.layer) return;
 
-        var otherUnit = collision.gameObject.GetComponent<SoldierNew>().unit;
-        if (otherUnit != unit && !unit.isInFight && !otherUnit.isInFight)
-        {
-            Vector3 dir = collision.transform.position - transform.position;
-            if (Vector3.Angle(dir, transform.forward) < 45)
-            {
-                if (Vector3.Distance(collision.transform.position, targetPos) < Vector3.Distance(transform.position, targetPos))
-                {
-                    var oldPos = transform.position;
-                    transform.position = collision.transform.position;
-                    collision.transform.position = oldPos;
-                }
-            }
-            allyCollision++;
-            transform.LookAt(unit.transform.forward);
-        }
-    }
+    //    var otherUnit = collision.gameObject.GetComponent<SoldierNew>().unit;
+    //    if (otherUnit != unit && !unit.isInFight && !otherUnit.isInFight)
+    //    {
+    //        Vector3 dir = collision.transform.position - transform.position;
+    //        if (Vector3.Angle(dir, transform.forward) < 45)
+    //        {
+    //            if (Vector3.Distance(collision.transform.position, targetPos) < Vector3.Distance(transform.position, targetPos))
+    //            {
+    //                var oldPos = transform.position;
+    //                transform.position = collision.transform.position;
+    //                collision.transform.position = oldPos;
+    //            }
+    //        }
+    //        allyCollision++;
+    //        transform.LookAt(unit.transform.forward);
+    //    }
+    //}
 
-    private void OnCollisionStay(Collision collision)
-    {
-        if (collision.gameObject.layer != gameObject.layer) return;
+    //private void OnCollisionStay(Collision collision)
+    //{
+    //    if (collision.gameObject.layer != gameObject.layer) return;
 
-        var otherUnit = collision.gameObject.GetComponent<SoldierNew>().unit;
-        if (otherUnit != unit && !unit.isInFight && !otherUnit.isInFight)
-        {
-            rb.AddForce(Random.Range(2.5f,5f) * movementForce * Vector3.RotateTowards(targetPos - transform.position, GetRandomVectorXZ(1), 60 * Mathf.Deg2Rad, 100).normalized);
-            transform.LookAt(unit.transform.forward);
-        }
-    }
+    //    var otherUnit = collision.gameObject.GetComponent<SoldierNew>().unit;
+    //    if (otherUnit != unit && !unit.isInFight && !otherUnit.isInFight)
+    //    {
+    //        rb.AddForce(Random.Range(2.5f,5f) * movementForce * Vector3.RotateTowards(targetPos - transform.position, GetRandomVectorXZ(1), 60 * Mathf.Deg2Rad, 100).normalized);
+    //        transform.LookAt(unit.transform.forward);
+    //    }
+    //}
 
-    private void OnCollisionExit(Collision collision)
-    {
-        if (collision.gameObject.layer == gameObject.layer && collision.gameObject.GetComponent<SoldierNew>().unit != unit && !unit.isInFight)
-            allyCollision--;
-        GetComponent<SphereCollider>().radius = radius;
-    }
+    //private void OnCollisionExit(Collision collision)
+    //{
+    //    if (collision.gameObject.layer == gameObject.layer && collision.gameObject.GetComponent<SoldierNew>().unit != unit && !unit.isInFight)
+    //        allyCollision--;
+    //    GetComponent<SphereCollider>().radius = radius;
+    //}
 
 
     //WaitForEndOfFrame wfeof = new WaitForEndOfFrame();
