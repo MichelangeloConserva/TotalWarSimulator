@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using static MeleeStats;
+using static Utils;
 
 public class SoldierNew : MonoBehaviour
 {
@@ -89,32 +90,104 @@ public class SoldierNew : MonoBehaviour
     }
     private UpdateData data;
 
+    private void Start()
+    {
+        radius = GetComponent<SphereCollider>().radius;
+    }
 
     private void Update()
     {
-        if (data.bUpdate)
+        if (!letItPass)
         {
-            data.bUpdate = false;
-
-            rb.AddForce(Vector3.ClampMagnitude(data.force, movementForce),
-                        isCharging ? ForceMode.Impulse : ForceMode.Force);
-
-            if (unit.isInFight)
+            if (data.bUpdate)
             {
-                var rotation = Quaternion.LookRotation(targetLookAt - position);
-                transform.rotation = Quaternion.Lerp(transform.rotation, rotation, Time.deltaTime);
+                data.bUpdate = false;
+
+                rb.AddForce(Vector3.ClampMagnitude(data.force, movementForce),
+                            isCharging ? ForceMode.Impulse : ForceMode.Force);
+
+                if (unit.isInFight)
+                {
+                    var rotation = Quaternion.LookRotation(targetLookAt - position);
+                    transform.rotation = Quaternion.Lerp(transform.rotation, rotation, 3 * Time.deltaTime);
+                }
+                else
+                    transform.LookAt(targetLookAt);
             }
-            else
-                transform.LookAt(targetLookAt);
         }
+        else
+            letItPass = false;
 
-
-
-
+        
         _position = transform.position;
         _direction = transform.forward;
         _velocity = rb.velocity;
     }
+
+
+    private bool letItPass;
+    //private void OnCollisionStay(Collision collision)
+    //{
+    //    if (collision.gameObject.layer == gameObject.layer && collision.gameObject.GetComponent<SoldierNew>().unit != unit && !unit.isInFight)
+    //    {
+    //        rb.AddForce( GetVector3Down((collision.GetContact(0).point - transform.position).normalized) * movementForce + GetRandomVectorXZ(movementForce/5));
+    //        letItPass = true;
+    //        Debug.DrawRay(collision.GetContact(0).point, Vector3.up * 10);
+    //    }
+    //}
+
+    public float radius;
+    public int allyCollision = 0;
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.layer != gameObject.layer) return;
+
+        var otherUnit = collision.gameObject.GetComponent<SoldierNew>().unit;
+        if (otherUnit != unit && !unit.isInFight && !otherUnit.isInFight)
+        {
+            Vector3 dir = collision.transform.position - transform.position;
+            if (Vector3.Angle(dir, transform.forward) < 45)
+            {
+                if (Vector3.Distance(collision.transform.position, targetPos) < Vector3.Distance(transform.position, targetPos))
+                {
+                    var oldPos = transform.position;
+                    transform.position = collision.transform.position;
+                    collision.transform.position = oldPos;
+                }
+            }
+            allyCollision++;
+            transform.LookAt(unit.transform.forward);
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        if (collision.gameObject.layer != gameObject.layer) return;
+
+        var otherUnit = collision.gameObject.GetComponent<SoldierNew>().unit;
+        if (otherUnit != unit && !unit.isInFight && !otherUnit.isInFight)
+        {
+            rb.AddForce(Random.Range(2.5f,5f) * movementForce * Vector3.RotateTowards(targetPos - transform.position, GetRandomVectorXZ(1), 60 * Mathf.Deg2Rad, 100).normalized);
+            transform.LookAt(unit.transform.forward);
+        }
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.layer == gameObject.layer && collision.gameObject.GetComponent<SoldierNew>().unit != unit && !unit.isInFight)
+            allyCollision--;
+        GetComponent<SphereCollider>().radius = radius;
+    }
+
+
+    //WaitForEndOfFrame wfeof = new WaitForEndOfFrame();
+    //private IEnumerator JustLetItPass()
+    //{
+    //    yield return wfeof
+
+
+
+    //}
 
 
 }

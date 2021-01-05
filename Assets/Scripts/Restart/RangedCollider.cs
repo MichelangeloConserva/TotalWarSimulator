@@ -11,10 +11,12 @@ public class RangedCollider : MonoBehaviour
     {
         if (other.GetType() != typeof(BoxCollider)) return;
 
+
+        if (unit.commandTarget != null && other.GetComponentInParent<UnitNew>() == unit.commandTarget)
+            unit.cunit.Stop();
+
         unit.unitsInRange.Add(other.GetComponentInParent<UnitNew>());
 
-        if (unit.commandTarget == null && unit.freeFire)
-            unit.commandTarget = other.GetComponentInParent<UnitNew>();
     }
 
     private void OnTriggerStay(Collider other)

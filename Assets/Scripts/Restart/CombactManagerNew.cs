@@ -48,16 +48,19 @@ public class CombactManagerNew : MonoBehaviour
             foreach(var s in u.soldiers)
                 if (s.health < 0)
                     deads.Add(s);
+
             foreach(var d in deads)
             {
                 u.soldiers.Remove(d);
                 Destroy(d.gameObject);
             }
+            if (deads.Count > 0)
+                u.UpdateMeleeCollider();
+
 
 
             if (u.fightingAgainst.Count > 0)
                 AddSoldiersTargets(u);
-            
 
         }
 
@@ -76,7 +79,7 @@ public class CombactManagerNew : MonoBehaviour
 
     private IEnumerator DestroyUnitCO(UnitNew du)
     {
-        du.position = -Vector3.up * 10;
+        du.position = -Vector3.up * 100;
         yield return new WaitForSeconds(10);
         Destroy(du);
     }

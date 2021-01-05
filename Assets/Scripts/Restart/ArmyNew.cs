@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static MeleeStats;
+using static RangedStats;
 using static Utils;
 
 
@@ -30,6 +32,7 @@ public class ArmyNew : MonoBehaviour
     public List<MeleeStats> cavalry;
     public List<RangedUnitStats> archers;
 
+    public float expansion = 1f;
     public bool DEBUG_MODE;
 
     public List<UnitNew> units;
@@ -60,12 +63,10 @@ public class ArmyNew : MonoBehaviour
 
     public void InstantiateArmy(bool debug = false)
     {
-        int k = 0;
         units = new List<UnitNew>(infantry.Count + archers.Count + cavalry.Count);
         infantryUnits = new GameObject[infantry.Count];
         archerUnits = new GameObject[archers.Count];
         cavalryUnits = new GameObject[cavalry.Count];
-        float expansion = 1f;
 
         float infantryLineDepth = 2 * GetHalfLenght(infantry.First().meleeHolder.soldierDistVertical, infantry.First().meleeHolder.startingCols);
 
@@ -79,180 +80,39 @@ public class ArmyNew : MonoBehaviour
         float c = infantry.Count - 1;
         for (int i = 0; i < infantry.Count; i++)
         {
+            Gizmos.color = Color.green;
             Vector3 curPos = start * (i / c) + end * (1 - i / c);
-            var u = infantry.ElementAt(i).meleeHolder;
+            var u = infantry.ElementAt(i);
             if (debug)
-            {
-                res = GetFormationAtPos(curPos, transform.forward, u.startingNumOfSoldiers, u.startingCols, u.soldierDistLateral, u.soldierDistVertical);
-                Gizmos.color = Color.green;
-                foreach (var p in res)
-                    Gizmos.DrawSphere(p + Vector3.up * 2, 0.4f);
-
-                Gizmos.color = Color.red;
-
-                float curLength = GetHalfLenght(u.soldierDistLateral, u.startingCols);
-                float frontExp = GetHalfLenght(u.soldierDistVertical, u.startingNumOfSoldiers / u.startingCols) + expansion;
-                float latExp = curLength + expansion;
-
-                Gizmos.color = Color.red;
-                Vector3 frontLeft = curPos + transform.forward * frontExp - transform.right * latExp;
-                Vector3 frontRight = curPos + transform.forward * frontExp + transform.right * latExp;
-                Vector3 backLeft = curPos - transform.forward * frontExp - transform.right * latExp;
-                Vector3 backRight = curPos - transform.forward * frontExp + transform.right * latExp;
-                Gizmos.DrawLine(backLeft + Vector3.up, backRight + Vector3.up);
-                Gizmos.DrawLine(frontRight + Vector3.up, frontLeft + Vector3.up);
-                Gizmos.DrawLine(backLeft + Vector3.up, frontLeft + Vector3.up);
-                Gizmos.DrawLine(backRight + Vector3.up, frontRight + Vector3.up);
-
-            }
+                DrawMeleeAtPos(curPos, u);
             else
-            {
-                var curUnit = new GameObject("Infantry (" + i + ")");
-                curUnit.transform.position = curPos;
-                curUnit.transform.rotation = Quaternion.Euler(transform.forward);
-                curUnit.transform.parent = transform;
-                curUnit.layer = LayerMask.NameToLayer(allyUnitLayer);
-
-                var unitMB = curUnit.AddComponent<UnitNew>();
-                unitMB.Instantiate(curPos, transform.forward, infantry.ElementAt(i).meleeHolder, soldiersHolder, infantry.ElementAt(i).soldierPrefab, this);
-
-                infantryUnits[i] = curUnit;
-                units.Add(unitMB);
-
-                float curLength = GetHalfLenght(u.soldierDistLateral, u.startingCols);
-                float frontExp = GetHalfLenght(u.soldierDistVertical, u.startingNumOfSoldiers / u.startingCols) + expansion;
-                float latExp = curLength + expansion;
-
-                var meleeCollider = new GameObject("MeleeCollider");
-                meleeCollider.transform.parent = curUnit.transform;
-                meleeCollider.transform.localPosition = Vector3.zero;
-                meleeCollider.AddComponent<MeleeCollider>().unit = unitMB;
-                meleeCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
-                var bColl = meleeCollider.AddComponent<BoxCollider>();
-                bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
-                bColl.isTrigger = true;
-                var rb = meleeCollider.AddComponent<Rigidbody>();
-                rb.isKinematic = true;
-                rb.useGravity = false;
-
-
-            }
+                AddMeleeAtPos(curPos, "Infantry", u, i, infantryUnits);
 
         }
 
 
         Vector3 leftCavPos = start - transform.right * 3 * infantryLineLength / infantry.Count - transform.forward * infantryLineDepth;
         Vector3 RightCavPos = end + transform.right * 3 * infantryLineLength / infantry.Count - transform.forward * infantryLineDepth;
-
-        var leftCav = cavalry.First().meleeHolder;
-        var rightCav = cavalry.Last().meleeHolder;
+        var leftCav = cavalry.First();
+        var rightCav = cavalry.Last();
 
         if (debug)
         {
-            res = GetFormationAtPos(leftCavPos, transform.forward, leftCav.startingNumOfSoldiers, leftCav.startingCols, leftCav.soldierDistLateral, leftCav.soldierDistVertical);
             Gizmos.color = Color.blue;
-            foreach (var p in res)
-                Gizmos.DrawSphere(p + Vector3.up * 2, 0.4f);
-            
-            res = GetFormationAtPos(RightCavPos, transform.forward, rightCav.startingNumOfSoldiers, rightCav.startingCols, rightCav.soldierDistLateral, rightCav.soldierDistVertical);
+            DrawMeleeAtPos(RightCavPos, rightCav);
             Gizmos.color = Color.blue;
-            foreach (var p in res)
-                Gizmos.DrawSphere(p + Vector3.up * 2, 0.4f);
-
-
-
-            Gizmos.color = Color.red;
-
-            float curLength = GetHalfLenght(leftCav.soldierDistLateral, leftCav.startingCols);
-            float frontExp = GetHalfLenght(leftCav.soldierDistVertical, leftCav.startingNumOfSoldiers / leftCav.startingCols) + expansion;
-            float latExp = curLength + expansion;
-
-            Gizmos.color = Color.red;
-            Vector3 frontLeft = leftCavPos + transform.forward * frontExp - transform.right * latExp;
-            Vector3 frontRight = leftCavPos + transform.forward * frontExp + transform.right * latExp;
-            Vector3 backLeft = leftCavPos - transform.forward * frontExp - transform.right * latExp;
-            Vector3 backRight = leftCavPos - transform.forward * frontExp + transform.right * latExp;
-            Gizmos.DrawLine(backLeft + Vector3.up, backRight + Vector3.up);
-            Gizmos.DrawLine(frontRight + Vector3.up, frontLeft + Vector3.up);
-            Gizmos.DrawLine(backLeft + Vector3.up, frontLeft + Vector3.up);
-            Gizmos.DrawLine(backRight + Vector3.up, frontRight + Vector3.up);
-
-            curLength = GetHalfLenght(rightCav.soldierDistLateral, rightCav.startingCols);
-            frontExp = GetHalfLenght(rightCav.soldierDistVertical, rightCav.startingNumOfSoldiers / rightCav.startingCols) + expansion;
-            latExp = curLength + expansion;
-
-            Gizmos.color = Color.red;
-            frontLeft = RightCavPos + transform.forward * frontExp - transform.right * latExp;
-            frontRight = RightCavPos + transform.forward * frontExp + transform.right * latExp;
-            backLeft = RightCavPos - transform.forward * frontExp - transform.right * latExp;
-            backRight = RightCavPos - transform.forward * frontExp + transform.right * latExp;
-            Gizmos.DrawLine(backLeft + Vector3.up, backRight + Vector3.up);
-            Gizmos.DrawLine(frontRight + Vector3.up, frontLeft + Vector3.up);
-            Gizmos.DrawLine(backLeft + Vector3.up, frontLeft + Vector3.up);
-            Gizmos.DrawLine(backRight + Vector3.up, frontRight + Vector3.up);
-
+            DrawMeleeAtPos(leftCavPos, leftCav);
         }
         else
         {
-            float curLength = GetHalfLenght(leftCav.soldierDistLateral, leftCav.startingCols);
-            float frontExp = GetHalfLenght(leftCav.soldierDistVertical, leftCav.startingNumOfSoldiers / leftCav.startingCols) + expansion;
-            float latExp = curLength + expansion;
-            var curUnit = new GameObject("Cavalry (0)");
-            curUnit.transform.position = leftCavPos;
-            curUnit.transform.rotation = Quaternion.Euler(transform.forward);
-            curUnit.transform.parent = transform;
-
-
-            var unitMB = curUnit.AddComponent<UnitNew>();
-            unitMB.Instantiate(leftCavPos, transform.forward, cavalry.First().meleeHolder, soldiersHolder, cavalry.First().soldierPrefab, this);
-            cavalryUnits[0] = curUnit;
-            units.Add(unitMB);
-
-            var meleeCollider = new GameObject("MeleeCollider");
-            meleeCollider.transform.parent = curUnit.transform;
-            meleeCollider.transform.localPosition = Vector3.zero;
-            meleeCollider.AddComponent<MeleeCollider>().unit = unitMB;
-            meleeCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
-            var bColl = meleeCollider.AddComponent<BoxCollider>();
-            bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
-            bColl.isTrigger = true;
-            var rb = meleeCollider.AddComponent<Rigidbody>();
-            rb.isKinematic = true;
-            rb.useGravity = false;
-
-
-
-
-
-            curLength = GetHalfLenght(rightCav.soldierDistLateral, rightCav.startingCols);
-            frontExp = GetHalfLenght(rightCav.soldierDistVertical, rightCav.startingNumOfSoldiers / rightCav.startingCols) + expansion;
-            latExp = curLength + expansion;
-            curUnit = new GameObject("Cavalry (1)");
-            curUnit.transform.position = RightCavPos;
-            curUnit.transform.rotation = Quaternion.Euler(transform.forward);
-            curUnit.transform.parent = transform;
-
-            unitMB = curUnit.AddComponent<UnitNew>();
-            unitMB.Instantiate(RightCavPos, transform.forward, cavalry.Last().meleeHolder, soldiersHolder, cavalry.Last().soldierPrefab, this);
-            cavalryUnits[0] = curUnit;
-            units.Add(unitMB);
-
-
-            meleeCollider = new GameObject("MeleeCollider");
-            meleeCollider.transform.parent = curUnit.transform;
-            meleeCollider.transform.localPosition = Vector3.zero;
-            meleeCollider.AddComponent<MeleeCollider>().unit = unitMB;
-            meleeCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
-            bColl = meleeCollider.AddComponent<BoxCollider>();
-            bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
-            bColl.isTrigger = true;
-            rb = meleeCollider.AddComponent<Rigidbody>();
-            rb.isKinematic = true;
-            rb.useGravity = false;
+            AddMeleeAtPos(leftCavPos, "Cavalry", leftCav, 0, cavalryUnits);
+            AddMeleeAtPos(RightCavPos, "Cavalry", rightCav, 1, cavalryUnits);
 
         }
 
-        float archerLenght = 2 * GetHalfLenght(archers.First().meleeStats.meleeHolder.soldierDistVertical, archers.First().meleeStats.meleeHolder.startingCols);
+
+
+
         float archersLineLength = 0;
         foreach (var i in archers)
         {
@@ -262,101 +122,157 @@ public class ArmyNew : MonoBehaviour
 
         start = transform.position - transform.right * archersLineLength + transform.forward * 2 * infantryLineDepth;
         end = transform.position + transform.right * archersLineLength + transform.forward * 2 * infantryLineDepth;
-
         c = archers.Count - 1;
         for (int i = 0; i < archers.Count; i++)
         {
             Vector3 curPos = start * (i / c) + end * (1 - i / c);
-            var u = archers.ElementAt(i).meleeStats;
+            var u = archers.ElementAt(i);
 
             if (debug)
-            {
-                res = GetFormationAtPos(curPos, transform.forward, u.meleeHolder.startingNumOfSoldiers, u.meleeHolder.startingCols, u.meleeHolder.soldierDistLateral, u.meleeHolder.soldierDistVertical);
-                Gizmos.color = Color.cyan;
-                foreach (var p in res)
-                    Gizmos.DrawSphere(p + Vector3.up * 2, 0.4f); 
-
-                float curLength = GetHalfLenght(u.meleeHolder.soldierDistLateral, u.meleeHolder.startingCols);
-                float frontExp = GetHalfLenght(u.meleeHolder.soldierDistVertical, u.meleeHolder.startingNumOfSoldiers / u.meleeHolder.startingCols) + expansion;
-                float latExp = curLength + expansion;
-
-                Gizmos.color = Color.red;
-                Vector3 frontLeft = curPos + transform.forward * frontExp - transform.right * latExp;
-                Vector3 frontRight = curPos + transform.forward * frontExp + transform.right * latExp;
-                Vector3 backLeft = curPos - transform.forward * frontExp - transform.right * latExp;
-                Vector3 backRight = curPos - transform.forward * frontExp + transform.right * latExp;
-                Gizmos.DrawLine(backLeft + Vector3.up, backRight + Vector3.up);
-                Gizmos.DrawLine(frontRight + Vector3.up, frontLeft + Vector3.up);
-                Gizmos.DrawLine(backLeft + Vector3.up, frontLeft + Vector3.up);
-                Gizmos.DrawLine(backRight + Vector3.up, frontRight + Vector3.up);
-
-                var rs = archers.ElementAt(i).rangedStats.rangedHolder;
-                DrawGizmoDisk(curPos, rs.range);
-
-
-
-            }
+                DrawArcherAtPos(curPos, u);
             else
-            {
-                var curUnit = new GameObject("Archer (" + i + ")");
-                curUnit.transform.position = curPos;
-                curUnit.transform.rotation = Quaternion.LookRotation(transform.forward);
-                curUnit.transform.parent = transform;
-
-                float curLength = GetHalfLenght(u.meleeHolder.soldierDistLateral, u.meleeHolder.startingCols);
-                float frontExp = GetHalfLenght(u.meleeHolder.soldierDistVertical, u.meleeHolder.startingNumOfSoldiers / u.meleeHolder.startingCols) + expansion;
-                float latExp = curLength + expansion;
-
-
-                var unitMB = curUnit.AddComponent<ArcherNew>();
-                unitMB.Instantiate(curPos, transform.forward, u.meleeHolder, soldiersHolder, u.soldierPrefab, this);
-                archerUnits[i] = curUnit;
-                units.Add(unitMB);
-
-                var rs = archers.ElementAt(i).rangedStats.rangedHolder;
-                unitMB.range = rs.range;
-                unitMB.arrowDamage = rs.arrowDamage;
-                unitMB.fireInterval = rs.fireInterval;
-                unitMB.freeFire = rs.freeFire;
-                unitMB.arrow = archers.ElementAt(i).rangedStats.arrow;
-
-
-                var rangedCollider = new GameObject("RangedCollider");
-                rangedCollider.transform.parent = curUnit.transform;
-                rangedCollider.transform.localPosition = Vector3.zero;
-                rangedCollider.AddComponent<RangedCollider>().unit = unitMB;
-                rangedCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
-                var cColl = rangedCollider.AddComponent<SphereCollider>();
-                cColl.radius = rs.range;
-                cColl.isTrigger = true;
-                var rb = rangedCollider.AddComponent<Rigidbody>();
-                rb.isKinematic = true;
-                rb.useGravity = false;
-
-
-                var meleeCollider = new GameObject("MeleeCollider");
-                meleeCollider.transform.parent = curUnit.transform;
-                meleeCollider.transform.localPosition = Vector3.zero;
-                meleeCollider.AddComponent<MeleeCollider>().unit = unitMB;
-                meleeCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
-                var bColl = meleeCollider.AddComponent<BoxCollider>();
-                bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
-                bColl.isTrigger = true;
-                rb = meleeCollider.AddComponent<Rigidbody>();
-                rb.isKinematic = true;
-                rb.useGravity = false;
-
-
-
-                var sc = Instantiate(selectionCirclePrefab, curUnit.transform);
-                sc.GetComponent<Projector>().orthographicSize = rs.range + 5;
-
-
-            }
-
+                AddArcherAtPos(curPos, u, i);
         }
 
 
+    }
+
+
+    private void DrawMeleeAtPos(Vector3 pos, MeleeStats u)
+    {
+        res = GetFormationAtPos(pos, transform.forward, u.meleeHolder.startingNumOfSoldiers, u.meleeHolder.startingCols, u.meleeHolder.soldierDistLateral, u.meleeHolder.soldierDistVertical);
+        foreach (var p in res)
+            Gizmos.DrawSphere(p + Vector3.up * 2, 0.4f);
+
+        Gizmos.color = Color.red;
+
+        float curLength = GetHalfLenght(u.meleeHolder.soldierDistLateral, u.meleeHolder.startingCols);
+        float frontExp = GetHalfLenght(u.meleeHolder.soldierDistVertical, u.meleeHolder.startingNumOfSoldiers / u.meleeHolder.startingCols) + expansion;
+        float latExp = curLength + expansion;
+
+        Gizmos.color = Color.red;
+        Vector3 frontLeft = pos + transform.forward * frontExp - transform.right * latExp;
+        Vector3 frontRight = pos + transform.forward * frontExp + transform.right * latExp;
+        Vector3 backLeft = pos - transform.forward * frontExp - transform.right * latExp;
+        Vector3 backRight = pos - transform.forward * frontExp + transform.right * latExp;
+        Gizmos.DrawLine(backLeft + Vector3.up, backRight + Vector3.up);
+        Gizmos.DrawLine(frontRight + Vector3.up, frontLeft + Vector3.up);
+        Gizmos.DrawLine(backLeft + Vector3.up, frontLeft + Vector3.up);
+        Gizmos.DrawLine(backRight + Vector3.up, frontRight + Vector3.up);
+    }
+
+    private void AddMeleeAtPos(Vector3 pos, string name, MeleeStats u, int i, GameObject[] list)
+    {
+        var curUnit = new GameObject(name+" (" + i + ")");
+        curUnit.transform.position = pos;
+        curUnit.transform.rotation = Quaternion.Euler(transform.forward);
+        curUnit.transform.parent = transform;
+
+        var unitMB = curUnit.AddComponent<UnitNew>();
+        unitMB.Instantiate(pos, transform.forward, u.meleeHolder, soldiersHolder, u.soldierPrefab, this);
+        list[i] = curUnit;
+        units.Add(unitMB);
+
+        var frontExp = CalculateFrontalExpansion(u.meleeHolder.soldierDistVertical, u.meleeHolder.startingNumOfSoldiers, u.meleeHolder.startingCols, expansion);
+        var latExp = CalculateLateralExpansion(u.meleeHolder.soldierDistLateral, u.meleeHolder.startingCols, expansion);
+        AddMeleeCollider(curUnit, unitMB, latExp, frontExp);
+    }
+
+
+
+    private void DrawArcherAtPos(Vector3 pos, RangedUnitStats u)
+    {
+        res = GetFormationAtPos(pos, transform.forward, u.meleeStats.meleeHolder.startingNumOfSoldiers, u.meleeStats.meleeHolder.startingCols, u.meleeStats.meleeHolder.soldierDistLateral, u.meleeStats.meleeHolder.soldierDistVertical);
+        Gizmos.color = Color.cyan;
+        foreach (var p in res)
+            Gizmos.DrawSphere(p + Vector3.up * 2, 0.4f);
+
+        float curLength = GetHalfLenght(u.meleeStats.meleeHolder.soldierDistLateral, u.meleeStats.meleeHolder.startingCols);
+        float frontExp = GetHalfLenght(u.meleeStats.meleeHolder.soldierDistVertical, u.meleeStats.meleeHolder.startingNumOfSoldiers / u.meleeStats.meleeHolder.startingCols) + expansion;
+        float latExp = curLength + expansion;
+
+        Gizmos.color = Color.red;
+        Vector3 frontLeft = pos + transform.forward * frontExp - transform.right * latExp;
+        Vector3 frontRight = pos + transform.forward * frontExp + transform.right * latExp;
+        Vector3 backLeft = pos - transform.forward * frontExp - transform.right * latExp;
+        Vector3 backRight = pos - transform.forward * frontExp + transform.right * latExp;
+        Gizmos.DrawLine(backLeft + Vector3.up, backRight + Vector3.up);
+        Gizmos.DrawLine(frontRight + Vector3.up, frontLeft + Vector3.up);
+        Gizmos.DrawLine(backLeft + Vector3.up, frontLeft + Vector3.up);
+        Gizmos.DrawLine(backRight + Vector3.up, frontRight + Vector3.up);
+
+        DrawGizmoDisk(pos, u.rangedStats.rangedHolder.range);
+    }
+
+
+    private void AddArcherAtPos(Vector3 pos, RangedUnitStats u, int i)
+    {
+        var curUnit = new GameObject("Archer (" + i + ")");
+        curUnit.transform.position = pos;
+        curUnit.transform.rotation = Quaternion.LookRotation(transform.forward);
+        curUnit.transform.parent = transform;
+        archerUnits[i] = curUnit;
+
+        var unitMB = AddArcherComponent(curUnit, pos, u.meleeStats.meleeHolder, u.meleeStats.soldierPrefab, u.rangedStats.rangedHolder, u.rangedStats.arrow);
+
+        AddRangedCollider(curUnit, unitMB, u.rangedStats.rangedHolder.range);
+
+        float frontExp = CalculateFrontalExpansion(u.meleeStats.meleeHolder.soldierDistVertical, u.meleeStats.meleeHolder.startingNumOfSoldiers, u.meleeStats.meleeHolder.startingCols, expansion);
+        float latExp = CalculateLateralExpansion(u.meleeStats.meleeHolder.soldierDistLateral, u.meleeStats.meleeHolder.startingCols, expansion);
+        AddMeleeCollider(curUnit, unitMB, latExp, frontExp);
+
+
+        var sc = Instantiate(selectionCirclePrefab, curUnit.transform);
+        sc.GetComponent<Projector>().orthographicSize = u.rangedStats.rangedHolder.range + 5;
+    }
+
+
+    private ArcherNew AddArcherComponent(GameObject go, Vector3 pos, MeleeStatsHolder meleeHolder, GameObject soldierPrefab, RangedStatsHolder rangedHolder, GameObject arrow)
+    {
+        var unitMB = go.AddComponent<ArcherNew>();
+        unitMB.Instantiate(pos, transform.forward, meleeHolder, soldiersHolder, soldierPrefab, this);
+        units.Add(unitMB);
+        unitMB.range = rangedHolder.range;
+        unitMB.arrowDamage = rangedHolder.arrowDamage;
+        unitMB.fireInterval = rangedHolder.fireInterval;
+        unitMB.freeFire = rangedHolder.freeFire;
+        unitMB.arrow = arrow;
+        return unitMB;
+    }
+    
+    private void AddRangedCollider(GameObject go, ArcherNew u, float range)
+    {
+        var rangedCollider = new GameObject("RangedCollider");
+        rangedCollider.transform.parent = go.transform;
+        rangedCollider.transform.localPosition = Vector3.zero;
+        rangedCollider.AddComponent<RangedCollider>().unit = u;
+        rangedCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
+        var cColl = rangedCollider.AddComponent<SphereCollider>();
+        cColl.radius = range;
+        cColl.isTrigger = true;
+        var rb = rangedCollider.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity = false;
+    }
+
+    private void AddMeleeCollider(GameObject go, UnitNew u, float latExp, float frontExp)
+    {
+        // TODO : find a better place to instantiate the LineRenderer
+        u.lr = go.AddComponent<LineRenderer>();
+        u.lr.enabled = false;
+
+
+        var meleeCollider = new GameObject("MeleeCollider");
+        meleeCollider.transform.parent = go.transform;
+        meleeCollider.transform.localPosition = Vector3.zero;
+        meleeCollider.AddComponent<MeleeCollider>().unit = u;
+        meleeCollider.layer = LayerMask.NameToLayer(allyUnitLayer);
+        var bColl = meleeCollider.AddComponent<BoxCollider>();
+        bColl.size = new Vector3(2 * latExp, 2, 2 * frontExp);
+        bColl.isTrigger = true;
+        var rb = meleeCollider.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity = false;
     }
 
 

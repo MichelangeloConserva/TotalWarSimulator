@@ -1,4 +1,5 @@
 ﻿using PathCreation;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -99,6 +100,10 @@ public class UnitNew : MonoBehaviour
     }
     private Vector3 _position, _direction;
 
+    public BoxCollider meleeCollider;
+
+    public LineRenderer lr;
+
     protected void OnDrawGizmos()
     {
         if (!army.DEBUG_MODE) return;
@@ -113,6 +118,20 @@ public class UnitNew : MonoBehaviour
             Gizmos.DrawLine(s.position, s.targetPos);
         }     
     }
+
+    public void UpdateMeleeCollider() // called when soldiers die
+    {
+        var frontExp = CalculateFrontalExpansion(soldierDistVertical, numOfSoldiers, numCols, army.expansion);
+        var latExp = CalculateLateralExpansion(soldierDistLateral, numCols, army.expansion);
+        
+        // Moving forward to compensate the reduction in collider size
+        var frontalDisff = (meleeCollider.size.z - 2*frontExp);
+
+        transform.position += transform.forward * frontalDisff / 2;
+        meleeCollider.size = new Vector3(2 * latExp, meleeCollider.size.y, 2 * frontExp);
+    }
+
+
 
 
     #region INSTATIONATION STUFF    
@@ -130,7 +149,8 @@ public class UnitNew : MonoBehaviour
         //pC.transform.localRotation = Quaternion.identity;
 
         cunit = gameObject.AddComponent<CUnitNew>();
-        cunit.Initialize(this, pC);
+        cunit.Initialize(this, pC, meleeStats.noise, meleeStats.attackingFactor);
+
     }
     private void SetLinks(MeleeStatsHolder meleeStats, ArmyNew army)
     {
@@ -157,16 +177,44 @@ public class UnitNew : MonoBehaviour
     #endregion
 
 
-
+    public bool letItPass;
     private void Update()
     {
         _position = transform.position;
         _direction = transform.forward;
+
+        if (!meleeCollider)
+            meleeCollider = GetComponentInChildren<BoxCollider>();
+
+
+        if (!isInFight && !letItPass && soldiers.Select(s => s.allyCollision).Sum() > 0)
+        {
+            letItPass = true;
+            StartCoroutine(JustLetItPass());
+        }
+
+
     }
 
+    
+    WaitForEndOfFrame wfeof = new WaitForEndOfFrame();
+    private IEnumerator JustLetItPass()
+    {
+        var oldLateral = soldierDistLateral;
+        var oldVert = soldierDistVertical;
 
+        while (soldiers.Select(s => s.allyCollision).Sum() != 0)
+        {
+            soldierDistLateral = soldierDistLateral < 1.5f ? soldierDistLateral * 1.005f : soldierDistLateral;
+            soldierDistVertical = soldierDistVertical < 1.5f ? soldierDistVertical * 1.005f : soldierDistVertical;
+            yield return wfeof;
+        }
 
-
+        
+        soldierDistLateral = oldLateral;
+        soldierDistVertical = oldVert;
+        letItPass = false;
+    }
 
 
 

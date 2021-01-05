@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static Utils;
 
 public class MeleeCollider : MonoBehaviour
 {
@@ -19,7 +20,18 @@ public class MeleeCollider : MonoBehaviour
         unit.fightingAgainst.Add(other.GetComponentInParent<UnitNew>());
 
         if (!unit.isInFight)
+        {
+            if (!other.gameObject) return;
+
             unit.isInFight = true;
+            var dir = GetVector3Down(other.transform.position - transform.position);
+            float dist = dir.magnitude;
+            if(dist>0)
+            {
+                unit.transform.rotation = Quaternion.LookRotation(dir);
+                unit.transform.position = transform.position + dir * (dist - unit.meleeCollider.size.z + 2) / dist;
+            }
+        }
     }
 
     private void OnTriggerStay(Collider other)

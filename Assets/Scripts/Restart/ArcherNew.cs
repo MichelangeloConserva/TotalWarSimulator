@@ -28,6 +28,9 @@ public class ArcherNew : UnitNew
 
 
 
+
+
+    public List<UnitNew> debugList;
     private IEnumerator FireArrowCoroutine()
     {
         WaitForSeconds wfs = new WaitForSeconds(fireInterval);
@@ -36,6 +39,13 @@ public class ArcherNew : UnitNew
         while (true)
         {
             if (isInFight) yield return wfeof;
+
+            if (commandTarget && commandTarget.numOfSoldiers == 0)
+                commandTarget = null;
+
+
+            if(unitsInRange.Count > 0 && commandTarget == null && freeFire)
+                commandTarget = unitsInRange.First();
 
             if (commandTarget != null)
             {
@@ -52,6 +62,9 @@ public class ArcherNew : UnitNew
     private Vector3 target;
     private bool ShootAt(UnitNew targetUnit)
     {
+        if (targetUnit.numOfSoldiers == 0) return false;
+
+
         CalculateTarget(targetUnit);//enemyUnitsInRange.First());
 
         if (Vector3.SqrMagnitude(bCol.ClosestPoint(target) - position) < 5) return false;

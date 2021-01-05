@@ -7,10 +7,8 @@ using static Utils;
 
 public class CUnitNew : MonoBehaviour
 {
-    [Range(0.0f, 5.0f)]
-    public float noise = 4f;
-    [Range(0.05f, 1.0f)]
-    public float attackingFactor = 0.9f;
+    public float noise;
+    public float attackingFactor;
 
     public PathCreator pathCreator;
     public EndOfPathInstruction endOfPathInstruction;
@@ -26,8 +24,10 @@ public class CUnitNew : MonoBehaviour
     private bool setFinalDirection;
 
 
-    public void Initialize(UnitNew u, PathCreator pathCreator, EndOfPathInstruction endOfPathInstruction = EndOfPathInstruction.Stop)
+    public void Initialize(UnitNew u, PathCreator pathCreator, float noise, float attackingFactor, EndOfPathInstruction endOfPathInstruction = EndOfPathInstruction.Stop)
     {
+        this.noise = noise;
+        this.attackingFactor = attackingFactor;
         unit = u;
         this.pathCreator = pathCreator;
         this.endOfPathInstruction = endOfPathInstruction;
@@ -41,12 +41,19 @@ public class CUnitNew : MonoBehaviour
         {
             unit.combactState = UnitCombactState.ATTACKING;
             unit.commandTarget = colls[0].GetComponent<SoldierNew>().unit;
+            traj[traj.Count-1] = unit.commandTarget.position;
         }
         else
         {
             unit.combactState = UnitCombactState.DEFENDING;
             unit.commandTarget = null;
         }
+
+        if(unit.commandTarget && unit.GetType() == typeof(ArcherNew) && ((ArcherNew)unit).unitsInRange.Contains(unit.commandTarget))
+        {
+            return;
+        }
+
 
         if (unit.isInFight)
             unit.state = UnitState.ESCAPING;
@@ -102,28 +109,13 @@ public class CUnitNew : MonoBehaviour
                     }
                 }
 
-
-
                 float averageDist = unit.soldiers.Aggregate(0f, (acc, s) => acc + (s.targetPos - s.position).magnitude) / unit.numOfSoldiers;
-
                 if (averageDist < 3)
-                {
                     distanceTravelled += unit.pathSpeed * Time.deltaTime * (1 - averageDist / 3);
-                }
-
 
 
                 if (path.GetClosestTimeOnPath(unit.position) > 0.97f)
-                {
-                    unit.position = path.GetPointAtDistance(distanceTravelled, endOfPathInstruction) + path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
-                    if (setFinalDirection)
-                        unit.direction = destDirection;
-                    else
-                        unit.direction = path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
-                    unit.state = UnitState.IDLE;
-                    foreach (var s in unit.soldiers)
-                        s.targetLookAt = s.targetPos + unit.direction;
-                }
+                    Stop();
                 else
                 {
                     unit.position = path.GetPointAtDistance(distanceTravelled, endOfPathInstruction);
@@ -153,6 +145,22 @@ public class CUnitNew : MonoBehaviour
 
     }
 
+    public void Stop()
+    {
+        pathCreator.bezierPath = new BezierPath(Vector3.zero);
+        unit.position = path.GetPointAtDistance(distanceTravelled, endOfPathInstruction) + path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
+        if (setFinalDirection)
+            unit.direction = destDirection;
+        else
+            unit.direction = path.GetDirectionAtDistance(distanceTravelled, endOfPathInstruction);
+        unit.state = UnitState.IDLE;
+        foreach (var s in unit.soldiers)
+            s.targetLookAt = s.targetPos + unit.direction;
+    }
+
+
+
+
 
     private Vector3 formationPos, unitDir;
     private Vector3[] targets, currents = new Vector3[0];
@@ -175,19 +183,34 @@ public class CUnitNew : MonoBehaviour
         if (unit.combactState == UnitCombactState.DEFENDING)
         {
             formationPos = unit.position;
-            unitDir = unit.fightingTarget.position - unit.position;
+            unitDir = unit.direction;
+            //unitDir = unit.fightingTarget.position - unit.position;
         }
         else
         {
-            var numOfRows = GetNumRows(unit.numOfSoldiers, unit.numCols);
-            var ColLength = GetHalfLenght(unit.soldierDistVertical, numOfRows);
-            numOfRows = GetNumRows(unit.fightingTarget.numOfSoldiers, unit.fightingTarget.numCols);
-            var EnemyColLength = GetHalfLenght(unit.fightingTarget.soldierDistVertical, numOfRows);
+            //var numOfRows = GetNumRows(unit.numOfSoldiers, unit.numCols);
+            //var ColLength = GetHalfLenght(unit.soldierDistVertical, numOfRows);
+            //numOfRows = GetNumRows(unit.fightingTarget.numOfSoldiers, unit.fightingTarget.numCols);
+            //var EnemyColLength = GetHalfLenght(unit.fightingTarget.soldierDistVertical, numOfRows);
+            //unitDir = (unit.fightingTarget.position - unit.position).normalized;
+            //unitDir *= (ColLength + EnemyColLength) * attackingFactor + 1;
+            ////formationPos = unit.fightingTarget.position - unitDir;
+            //unit.direction = -unitDir;
 
-            unitDir = (unit.fightingTarget.position - unit.position).normalized;
-            unitDir *= (ColLength + EnemyColLength) * attackingFactor;
-            formationPos = unit.fightingTarget.position - unitDir;
+            //unitDir = unit.fightingTarget.position - unit.position;
+            //var distanceFromEnemy = Vector3.Distance(unit.fightingTarget.meleeCollider.ClosestPoint(unit.transform.position), unit.transform.position);
+            //formationPos = unit.position + unit.direction.normalized * (distanceFromEnemy-unit.meleeCollider.size.z + 1);
+
+            //Debug.DrawLine(formationPos, formationPos + Vector3.up, Color.red, 5);
+            //Debug.Log("dada");
+            //Debug.Log(distanceFromEnemy);
+            //Debug.Log(formationPos);
+            //Debug.Log(unitDir);
+            formationPos = unit.position;
+            unitDir = unit.fightingTarget.position - unit.position;
         }
+
+
 
 
         CalculateAssignments(formationPos, unitDir);
@@ -203,20 +226,31 @@ public class CUnitNew : MonoBehaviour
 
             var dir = s.enemySoldierPosition - s.position;
             RaycastHit hit;
-            if (Physics.Raycast(s.frontPos, dir, out hit, 100, LayerMask.GetMask(unit.fightingTarget.soldierLayerName)))
+            if (Physics.Raycast(s.frontPos, dir, out hit, 100, LayerMask.GetMask(unit.fightingTarget.soldierLayerName, unit.soldierLayerName)))
             {
-                var dist = hit.distance * 0.8f;
-                if (dist < 0.5f) dist = 0;
-
-                // Lerping between the formation pos and the position for attacking the enemy soldier
-                s.targetPos += dist * (dir).normalized + new Vector3(Random.Range(-noise, noise), 0, Random.Range(-noise, noise));
-
-                // Fighting
-                if (hit.distance < s.meeleRange)
+                float dist;
+                if(hit.collider.gameObject.layer == s.gameObject.layer) // hit ally
                 {
-                    var enemy = hit.collider.GetComponent<SoldierNew>();
-                    float damage = Mathf.Max(s.meeleAttack - enemy.meeleDefence, 0);
-                    enemy.health -= (damage + Random.Range(0, 1)) * Time.deltaTime;
+                    dist = hit.distance * 0.8f; 
+                    if (dist < 0.5f) dist = 0;
+                    
+                    // Lerping between the formation pos and the position for attacking the enemy soldier
+                    s.targetPos += dist * (dir).normalized + new Vector3(Random.Range(-noise, noise), 0, Random.Range(-noise, noise));
+
+                }
+                else // hit enemy
+                {
+                    // Fighting
+                    if (hit.distance < s.meeleRange)
+                    {
+                        var enemy = hit.collider.GetComponent<SoldierNew>();
+                        float damage = Mathf.Max(s.meeleAttack - enemy.meeleDefence, 0);
+                        enemy.health -= (damage + Random.Range(0, 1)) * Time.deltaTime;
+                    }
+
+                    // We get closer to the enemy only if we are not too close
+                    if (hit.distance > s.meeleRange / 4)
+                        s.targetPos = GetVector3Down(hit.point) + new Vector3(Random.Range(-noise, noise), 0, Random.Range(-noise, noise));//+ 0.5f * Vector3.up;
                 }
 
                 if (unit.army.DEBUG_MODE)
@@ -226,6 +260,13 @@ public class CUnitNew : MonoBehaviour
             s.Move();
         }
     }
+
+
+
+
+
+
+
     private void UpdateFormation(Vector3 center, Vector3 direction)
     {
         CalculateAssignments(center, direction);
@@ -253,9 +294,10 @@ public class CUnitNew : MonoBehaviour
                 s.targetLookAt = GetVector3Down(hit.point) ;//+ 0.5f * Vector3.up;
                 var dist = hit.distance * 0.8f;
                 if (dist < 0.5f) dist = 0;
-                Debug.Log(dist);
                 s.targetPos = dist * (dir).normalized + s.position + new Vector3(Random.Range(-noise, noise), 0, Random.Range(-noise, noise));
-                Debug.DrawRay(s.position, s.targetPos - s.position + Vector3.up * 2, Color.magenta);
+
+                if (unit.army.DEBUG_MODE)
+                    Debug.DrawRay(s.position, s.targetPos - s.position + Vector3.up * 2, Color.magenta);
             }
             s.Move();
         }

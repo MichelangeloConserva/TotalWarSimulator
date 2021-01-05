@@ -258,9 +258,12 @@ public static class Utils
     // public enum UnitStatus { IDLE, CHARGING }
     public enum Cardinal { NW, N, NE, E, SE, S, SW, W }
     public enum UnitState { IDLE, MOVING, FIGHTING, ESCAPING }
-    public enum UnitCombactState { ATTACKING, DEFENDING }
+    public enum UnitCombactState { DEFENDING, ATTACKING  }
     public enum UnitMovementState { WALKING, RUNNING }
     public enum ArmyRole { ATTACKER, DEFENDER }
+
+
+    public static Vector3 GetRandomVectorXZ(float noise) { return new Vector3(Random.Range(-noise, noise), 0, Random.Range(-noise, noise)); }
 
 
     public static int GetNumRows(int numOfSoldiers, int cols) { return (int)Mathf.Ceil(numOfSoldiers / (float)cols); }
@@ -273,6 +276,14 @@ public static class Utils
         return curRow;
     }
 
+    public static float CalculateLateralExpansion(float soldierDistLateral, int cols, float expansion)
+    {
+        return GetHalfLenght(soldierDistLateral, cols) + expansion;
+    }
+    public static float CalculateFrontalExpansion(float soldierDistVertical, int num, int col, float expansion)
+    {
+        return GetHalfLenght(soldierDistVertical, (int)Mathf.Ceil( num / (float)col)) + expansion;
+    }
 
     public struct FormationIndices
     {
