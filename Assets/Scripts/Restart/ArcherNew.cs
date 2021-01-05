@@ -17,6 +17,7 @@ public class ArcherNew : UnitNew
     public float maxVelocity = 2;
 
     public HashSet<UnitNew> unitsInRange = new HashSet<UnitNew>();
+    public Projector rangeShader;
 
     private WaitForEndOfFrame wfeof = new WaitForEndOfFrame();
 

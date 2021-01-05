@@ -204,7 +204,6 @@ public class ArmyNew : MonoBehaviour
         DrawGizmoDisk(pos, u.rangedStats.rangedHolder.range);
     }
 
-
     private void AddArcherAtPos(Vector3 pos, RangedUnitStats u, int i)
     {
         var curUnit = new GameObject("Archer (" + i + ")");
@@ -223,7 +222,9 @@ public class ArmyNew : MonoBehaviour
 
 
         var sc = Instantiate(selectionCirclePrefab, curUnit.transform);
-        sc.GetComponent<Projector>().orthographicSize = u.rangedStats.rangedHolder.range + 5;
+        unitMB.rangeShader = sc.GetComponent<Projector>();
+        unitMB.rangeShader.orthographicSize = u.rangedStats.rangedHolder.range + 5;
+        unitMB.rangeShader.enabled = false;
     }
 
 
@@ -263,6 +264,7 @@ public class ArmyNew : MonoBehaviour
 
 
         var meleeCollider = new GameObject("MeleeCollider");
+        meleeCollider.tag = "Melee";
         meleeCollider.transform.parent = go.transform;
         meleeCollider.transform.localPosition = Vector3.zero;
         meleeCollider.AddComponent<MeleeCollider>().unit = u;

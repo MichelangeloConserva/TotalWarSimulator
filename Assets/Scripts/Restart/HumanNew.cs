@@ -7,27 +7,43 @@ using static Utils;
 
 public class HumanNew : MonoBehaviour
 {
-    public RectTransform selectionBox;
+
+    [Header("Settings")]
+    public float timeForNewFormation = 1;
+    public float rangedShaderSkiptime;
     public ArmyRole team;
+
+
+    [Header("Linking")]
     public ArmyNew[] armies;
+    public GameObject ghostPrefab;
+    public RectTransform selectionBox;
+    public LineRenderer mylr;
+
+
+    [Header("UnitControl")]
+    public List<Vector3> mouseTraj;
+    public CUnitNew selectedUnit;
+    public ArcherNew selectedArcher;
 
 
     public ArmyNew army { get { return armies[(int)team]; } }
 
-    public List<Vector3> mouseTraj;
 
-    public CUnitNew selectedUnit;
-
-    private Vector3 mouseClick, startMouseClick;
-    private Vector3 startMousePos, endMousePos;
-    private Vector3 diff;
-
-    public LineRenderer mylr;
+    // Cache variables
     private LineRenderer lr;
+    private List<GameObject> ghosts;
+    private Vector3 mouseClick, startMouseClick, lastDir, finalDir, curPos, startMousePos, endMousePos, diff;
+    private float maxWidth, curWidth;
 
-    void Start()
+    private int allUnits;
+
+    private void Start()
     {
+        allUnits = LayerMask.GetMask(armies[0].allyUnitLayer, armies[1].allyUnitLayer);
+        StartCoroutine(DrawRangedUnitsShaderCO());
     }
+
 
     void Update()
     {
@@ -51,9 +67,6 @@ public class HumanNew : MonoBehaviour
 
 
 
-
-
-
         if (Input.GetKey(KeyCode.Space))
             RenderPath(army.units.Select(u => u.cunit).ToArray());
         
@@ -63,13 +76,12 @@ public class HumanNew : MonoBehaviour
 
 
 
+
+
+
         if (!selectedUnit) return;
 
 
-        if (!Input.GetKey(KeyCode.Space))
-        {
-            RenderPath(selectedUnit);
-        }
 
 
         // FORMATION 
@@ -92,15 +104,13 @@ public class HumanNew : MonoBehaviour
             {
                 selectedUnit.MoveAt(mouseTraj);
                 mouseTraj.Clear();
+                RenderPath(selectedUnit);
             }
         }
 
 
         if (Input.GetMouseButtonDown(1) && !Input.GetKey(KeyCode.LeftShift))
-        {
-            mouseClick = GetMousePosInWorld();
-            selectedUnit.MoveAt(mouseClick);
-        }
+            StartCoroutine(RMBUpCO());
 
 
         if (Input.GetKeyDown(KeyCode.R))
@@ -117,6 +127,108 @@ public class HumanNew : MonoBehaviour
 
     }
 
+    private IEnumerator DrawRangedUnitsShaderCO()
+    {
+        var wfs = new WaitForSeconds(rangedShaderSkiptime);
+        yield return wfs;
+
+        while (true)
+        {
+            ArcherNew c;
+            foreach (var a in armies[0].archerUnits)
+                if ((c = a.GetComponent<ArcherNew>()) != selectedArcher)
+                    c.rangeShader.enabled = false;
+            foreach (var a in armies[1].archerUnits)
+                if ((c = a.GetComponent<ArcherNew>()) != selectedArcher)
+                    c.rangeShader.enabled = false;
+
+
+            ArcherNew aa;
+            var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit[] hits;
+            if ((hits = Physics.RaycastAll(ray, 10000, allUnits)).Length != 0)
+            {
+                foreach (var hit in hits)
+                {
+                    if (hit.collider.gameObject.CompareTag("Melee"))
+                        if (aa = hit.collider.gameObject.GetComponentInParent<ArcherNew>())
+                            aa.rangeShader.enabled = true;
+                }
+            }
+            yield return wfs;
+        }
+        
+        
+    }
+
+
+
+    private IEnumerator RMBUpCO()
+    {
+        mouseClick = GetMousePosInWorld();
+        var start = Time.time;
+
+        yield return new WaitUntil(() => Input.GetMouseButtonUp(1) || Time.time - start > timeForNewFormation);
+
+        if (Time.time - start < timeForNewFormation)
+        {
+            selectedUnit.MoveAt(mouseClick);
+            RenderPath(selectedUnit);
+        }
+        else
+            StartCoroutine(DrawGhostFormationCO(mouseClick));
+    }
+
+    private IEnumerator DrawGhostFormationCO(Vector3 mouseClick)
+    {
+
+        int numOfCols = selectedUnit.unit.numCols;
+        float latDist = selectedUnit.unit.soldierDistLateral;
+        finalDir = mouseClick - selectedUnit.transform.position;
+        ghosts = Enumerable.Range(0, selectedUnit.unit.numOfSoldiers).Select(i => Instantiate(ghostPrefab, transform)).ToList();
+
+        yield return new WaitUntil(() =>
+        {
+            if (!selectedUnit) return true;
+
+            while (ghosts.Count > selectedUnit.unit.numOfSoldiers)
+                ghosts.RemoveAt(0);
+            maxWidth = 2*GetHalfLenght(selectedUnit.unit.soldierDistLateral, selectedUnit.unit.numOfSoldiers);
+
+            curPos = GetMousePosInWorld();
+            curWidth = (curPos - mouseClick).magnitude;
+            if(curWidth > 0)
+                lastDir = Vector3.ClampMagnitude(curPos - mouseClick, maxWidth);
+
+
+            numOfCols = (int)(lastDir.magnitude / latDist) + 1;
+            Vector2 perp = Vector2.Perpendicular(new Vector2(lastDir.x, lastDir.z));
+            finalDir = new Vector3(perp.x, 0, perp.y);
+            var curLength = GetHalfLenght(selectedUnit.unit.soldierDistLateral, numOfCols);
+            var res = GetFormationAtPos(mouseClick + lastDir.normalized * curLength, finalDir, selectedUnit.unit.numOfSoldiers, numOfCols, selectedUnit.unit.soldierDistLateral, selectedUnit.unit.soldierDistVertical);
+
+            for(int i=0; i<selectedUnit.unit.numOfSoldiers; i++)
+            {
+                ghosts[i].transform.position = res[i];
+                ghosts[i].transform.rotation = Quaternion.LookRotation(finalDir);
+            }
+
+            return Input.GetMouseButtonUp(1);
+        });
+
+        foreach (var g in ghosts)
+            Destroy(g);
+
+        if (selectedUnit)
+        {
+            selectedUnit.unit.numCols = numOfCols;
+            selectedUnit.MoveAt(mouseClick, finalDir);
+        }
+    }
+
+
+
+
 
     private void RenderPath(params CUnitNew[] cunits)
     {
@@ -126,13 +238,7 @@ public class HumanNew : MonoBehaviour
             lr = cu.unit.lr;
             lr.enabled = true;
 
-
-            //if (lr.material == null)
-            //{
-            //    lr.material = new Material(mylr.material);
-            //    lr.material.SetColor("_Color", Color.yellow);
-            //}
-
+            Debug.Log(path.NumPoints);
 
             if (path.NumPoints != 30)
             {
@@ -179,10 +285,20 @@ public class HumanNew : MonoBehaviour
             {
                 selectedUnit.unit.isSelected = false;
                 selectedUnit.unit.lr.enabled = false;
+                if (selectedUnit.unit.GetType() == typeof(ArcherNew))
+                    ((ArcherNew)selectedUnit.unit).rangeShader.enabled = false;
             }
             selectedUnit = null;
 
             selectedUnit = hits[0].collider.GetComponent<SoldierNew>().unit.cunit;
+
+            if (selectedUnit.unit.GetType() == typeof(ArcherNew))
+            {
+                selectedArcher = (ArcherNew)selectedUnit.unit;
+                selectedArcher.rangeShader.enabled = true;
+            }
+
+
             selectedUnit.unit.isSelected = true;
         }
         else
@@ -191,6 +307,8 @@ public class HumanNew : MonoBehaviour
             {
                 selectedUnit.unit.isSelected = false;
                 selectedUnit.unit.lr.enabled = false;
+                if (selectedUnit.unit.GetType() == typeof(ArcherNew))
+                    ((ArcherNew)selectedUnit.unit).rangeShader.enabled = false;
             }
             selectedUnit = null;
         }

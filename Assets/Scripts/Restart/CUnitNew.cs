@@ -9,6 +9,8 @@ public class CUnitNew : MonoBehaviour
 {
     public float noise;
     public float attackingFactor;
+    public float escapeTime = 3; // TODO : encode this value
+
 
     public PathCreator pathCreator;
     public EndOfPathInstruction endOfPathInstruction;
@@ -56,7 +58,7 @@ public class CUnitNew : MonoBehaviour
 
 
         if (unit.isInFight)
-            unit.state = UnitState.ESCAPING;
+            StartCoroutine(EscapingCO());
         else
             unit.state = UnitState.MOVING;
 
@@ -74,6 +76,13 @@ public class CUnitNew : MonoBehaviour
         MoveAt(dest);
     }
 
+    private IEnumerator EscapingCO()
+    {
+        unit.state = UnitState.ESCAPING;
+        yield return new WaitForSeconds(escapeTime);
+        if (unit.state == UnitState.ESCAPING)
+            unit.state = UnitState.MOVING;
+    }
 
 
     //public void CalculateVariablesBeforeScheduling()
@@ -160,8 +169,6 @@ public class CUnitNew : MonoBehaviour
 
 
 
-
-
     private Vector3 formationPos, unitDir;
     private Vector3[] targets, currents = new Vector3[0];
     private int[] assignment;
@@ -184,33 +191,12 @@ public class CUnitNew : MonoBehaviour
         {
             formationPos = unit.position;
             unitDir = unit.direction;
-            //unitDir = unit.fightingTarget.position - unit.position;
         }
         else
         {
-            //var numOfRows = GetNumRows(unit.numOfSoldiers, unit.numCols);
-            //var ColLength = GetHalfLenght(unit.soldierDistVertical, numOfRows);
-            //numOfRows = GetNumRows(unit.fightingTarget.numOfSoldiers, unit.fightingTarget.numCols);
-            //var EnemyColLength = GetHalfLenght(unit.fightingTarget.soldierDistVertical, numOfRows);
-            //unitDir = (unit.fightingTarget.position - unit.position).normalized;
-            //unitDir *= (ColLength + EnemyColLength) * attackingFactor + 1;
-            ////formationPos = unit.fightingTarget.position - unitDir;
-            //unit.direction = -unitDir;
-
-            //unitDir = unit.fightingTarget.position - unit.position;
-            //var distanceFromEnemy = Vector3.Distance(unit.fightingTarget.meleeCollider.ClosestPoint(unit.transform.position), unit.transform.position);
-            //formationPos = unit.position + unit.direction.normalized * (distanceFromEnemy-unit.meleeCollider.size.z + 1);
-
-            //Debug.DrawLine(formationPos, formationPos + Vector3.up, Color.red, 5);
-            //Debug.Log("dada");
-            //Debug.Log(distanceFromEnemy);
-            //Debug.Log(formationPos);
-            //Debug.Log(unitDir);
             formationPos = unit.position;
             unitDir = unit.fightingTarget.position - unit.position;
         }
-
-
 
 
         CalculateAssignments(formationPos, unitDir);

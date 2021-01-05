@@ -307,7 +307,7 @@ MonoBehaviour:
   - meleeStats: {fileID: 1760734143}
     rangedStats: {fileID: 1760734142}
   expansion: 1
-  DEBUG_MODE: 0
+  DEBUG_MODE: 1
   units: []
   infantryUnits:
   - {fileID: 0}
@@ -925,14 +925,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 193bf22a9a31ad745b75c68e91517331, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  selectionBox: {fileID: 141595456}
+  timeForNewFormation: 0.5
+  rangedShaderSkiptime: 1
   team: 1
   armies:
   - {fileID: 2057375787}
   - {fileID: 625914213}
+  ghostPrefab: {fileID: 2317890148989551385, guid: 75b5050136adf1b42aa83df13108fcaf,
+    type: 3}
+  selectionBox: {fileID: 141595456}
+  mylr: {fileID: 1358005959}
   mouseTraj: []
   selectedUnit: {fileID: 0}
-  mylr: {fileID: 1358005959}
+  selectedArcher: {fileID: 0}
 --- !u!4 &1358005958
 Transform:
   m_ObjectHideFlags: 0
@@ -1479,7 +1484,7 @@ MonoBehaviour:
   - meleeStats: {fileID: 1210832655}
     rangedStats: {fileID: 1210832654}
   expansion: 1
-  DEBUG_MODE: 0
+  DEBUG_MODE: 1
   units: []
   infantryUnits:
   - {fileID: 0}
