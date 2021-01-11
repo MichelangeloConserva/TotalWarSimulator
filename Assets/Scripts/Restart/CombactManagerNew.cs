@@ -34,12 +34,19 @@ public class CombactManagerNew : MonoBehaviour
     {
 
         deadUnits.Clear();
-        foreach (var u in allUnits)
+        foreach (UnitNew u in allUnits)
         {
             
             if (u.soldiers.Count == 0)
             {
                 deadUnits.Add(u);
+
+                if (attacker.units.Contains(u))
+                    attacker.RemoveUnit(u);
+                else
+                    defender.RemoveUnit(u);
+
+
                 continue;
             }
 

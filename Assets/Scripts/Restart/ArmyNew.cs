@@ -1,6 +1,14 @@
-﻿using System.Collections;
+﻿using DbscanImplementation;
+using NetTopologySuite.Algorithm;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.Operation.Distance;
+using NetTopologySuite.Operation.Union;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 using static MeleeStats;
 using static RangedStats;
@@ -28,14 +36,17 @@ public class ArmyNew : MonoBehaviour
     public ArmyNew enemy;
 
     [Header("ArmyComposition")]
-    public List<MeleeStats> infantry;
-    public List<MeleeStats> cavalry;
-    public List<RangedUnitStats> archers;
+    public List<MeleeStats> infantryStats;
+    public List<MeleeStats> cavalryStats;
+    public List<RangedUnitStats> archersStats;
 
+    public float epsClust = 8;
     public float expansion = 1f;
     public bool DEBUG_MODE;
 
     public List<UnitNew> units;
+    public List<List<UnitNew>> partions;
+
 
     private Vector3[] res;
 
@@ -54,35 +65,174 @@ public class ArmyNew : MonoBehaviour
     private void OnDrawGizmos()
     {
         if(!Application.isPlaying)
+        {
             InstantiateArmy(true);
+            partions = new List<List<UnitNew>>();
+            partions.Add(units);
+        }
+        else
+        {
+            //CheckPartitions();
+        }
+
+    }
+
+
+    List<UnitNew> tempList = new List<UnitNew>();
+    Vector3 clusterPos;
+    int totalSoldiers;
+    int meleeSoldiers;
+    int rangedSoldies;
+    float clusterWidth;
+    UnitNew u;
+    Polygon geom;
+    private void CheckPartitions()
+    {
+        tempList.Clear();
+
+        GUI.color = Color.yellow;
+
+
+        var simpleDbscan = new DbscanAlgorithm<Tuple<UnitNew,Vector3>>((v1, v2) => Vector3.SqrMagnitude(v1.Item2-v2.Item2));
+        var result = simpleDbscan.ComputeClusterDbscan(units.Select(u => new Tuple<UnitNew, Vector3>(u, u.position)).ToArray(), epsilon: epsClust, minimumPoints: 1);
+
+
+
+
+        foreach (var p in result.Clusters.Values)
+        {
+            clusterPos = Vector3.zero;
+            totalSoldiers = 0;
+
+
+            geom = (Polygon)new ConvexHull(p.SelectMany(u => u.Feature.Item1.rectangle).ToArray(), GeometryFactory.Default).GetConvexHull();
+            var coords = geom.Coordinates;
+            for (int j = 0; j < coords.Length - 1; j++)
+            {
+                Gizmos.DrawLine(new Vector3((float)coords[j].X, 5, (float)coords[j].Y),
+                                new Vector3((float)coords[j + 1].X, 5, (float)coords[j + 1].Y));
+            }
+
+
+
+
+            int i = 0;
+            foreach (var tuple in p)
+            {
+                u = tuple.Feature.Item1;
+                clusterPos += tuple.Feature.Item2;
+                totalSoldiers += u.numOfSoldiers;
+
+
+
+
+                //clusterWidth += u.width;
+
+                if (i++ != 0)
+                {
+
+
+
+
+
+                }
+
+
+            }
+
+            clusterPos = clusterPos / p.Count + Vector3.up * 5;
+
+            Handles.Label(clusterPos, 
+                "# Soldier: " + totalSoldiers + "\n" +
+                "Perimeter/Sold coedd: " + (geom.Length / totalSoldiers).ToString("F2")
+                );
+
+
+
+            Gizmos.DrawSphere(clusterPos, 0.5f);
+        }
+
+
+
+
+
+
+
+
+
+
     }
 
 
 
-    public GameObject[] infantryUnits, archerUnits, cavalryUnits;
+
+
+
+
+
+    internal void RemoveUnit(UnitNew u)
+    {
+        units.Remove(u);
+        if (u.GetType() == typeof(ArcherNew))
+            archerUnits.Remove((ArcherNew)u);
+        else
+        {
+            if (infantryUnits.Contains(u))
+                infantryUnits.Remove(u);
+            else
+                cavalryUnits.Remove(u);
+        }
+
+    }
+
+    public List<UnitNew> infantryUnits, cavalryUnits;
+    public List<ArcherNew> archerUnits;
+
+
+    public void OnDestroy()
+    {
+        if (File.Exists("army" + (int)role + ".txt"))
+            File.Delete("army" + (int)role + ".txt");
+    }
+
+
+    private void WriteDownArmySpec()
+    {
+        using (StreamWriter writetext = File.AppendText("army" + (int)role + ".txt"))
+        {
+            writetext.WriteLine(infantryStats.Count);
+            writetext.WriteLine(archersStats.Count);
+            writetext.WriteLine(cavalryStats.Count);
+            writetext.Close();
+        }
+    }
+
+
 
     public void InstantiateArmy(bool debug = false)
     {
-        units = new List<UnitNew>(infantry.Count + archers.Count + cavalry.Count);
-        infantryUnits = new GameObject[infantry.Count];
-        archerUnits = new GameObject[archers.Count];
-        cavalryUnits = new GameObject[cavalry.Count];
+        WriteDownArmySpec();
 
-        float infantryLineDepth = 2 * GetHalfLenght(infantry.First().meleeHolder.soldierDistVertical, infantry.First().meleeHolder.startingCols);
+        units = new List<UnitNew>(infantryStats.Count + archersStats.Count + cavalryStats.Count);
+        infantryUnits = new List<UnitNew>(infantryStats.Count);
+        archerUnits = new List<ArcherNew>(archersStats.Count);
+        cavalryUnits = new List<UnitNew>(cavalryStats.Count);
+
+        float infantryLineDepth = 2 * GetHalfLenght(infantryStats.First().meleeHolder.soldierDistVertical, infantryStats.First().meleeHolder.startingCols);
 
         float infantryLineLength = 0;
-        foreach (var i in infantry)
+        foreach (var i in infantryStats)
             infantryLineLength += 2 * GetHalfLenght(i.meleeHolder.soldierDistLateral, i.meleeHolder.startingNumOfSoldiers / i.meleeHolder.startingCols);
 
         Vector3 start = transform.position - transform.right * infantryLineLength;
         Vector3 end = transform.position + transform.right * infantryLineLength;
 
-        float c = infantry.Count - 1;
-        for (int i = 0; i < infantry.Count; i++)
+        float c = infantryStats.Count - 1;
+        for (int i = 0; i < infantryStats.Count; i++)
         {
             Gizmos.color = Color.green;
             Vector3 curPos = start * (i / c) + end * (1 - i / c);
-            var u = infantry.ElementAt(i);
+            var u = infantryStats.ElementAt(i);
             if (debug)
                 DrawMeleeAtPos(curPos, u);
             else
@@ -91,10 +241,10 @@ public class ArmyNew : MonoBehaviour
         }
 
 
-        Vector3 leftCavPos = start - transform.right * 3 * infantryLineLength / infantry.Count - transform.forward * infantryLineDepth;
-        Vector3 RightCavPos = end + transform.right * 3 * infantryLineLength / infantry.Count - transform.forward * infantryLineDepth;
-        var leftCav = cavalry.First();
-        var rightCav = cavalry.Last();
+        Vector3 leftCavPos = start - transform.right * 5 * infantryLineLength / infantryStats.Count - transform.forward * infantryLineDepth;
+        Vector3 RightCavPos = end + transform.right * 5 * infantryLineLength / infantryStats.Count - transform.forward * infantryLineDepth;
+        var leftCav = cavalryStats.First();
+        var rightCav = cavalryStats.Last();
 
         if (debug)
         {
@@ -114,7 +264,7 @@ public class ArmyNew : MonoBehaviour
 
 
         float archersLineLength = 0;
-        foreach (var i in archers)
+        foreach (var i in archersStats)
         {
             var a = i.meleeStats;
             archersLineLength += 2 * GetHalfLenght(a.meleeHolder.soldierDistLateral, a.meleeHolder.startingNumOfSoldiers / a.meleeHolder.startingCols);
@@ -122,11 +272,11 @@ public class ArmyNew : MonoBehaviour
 
         start = transform.position - transform.right * archersLineLength + transform.forward * 2 * infantryLineDepth;
         end = transform.position + transform.right * archersLineLength + transform.forward * 2 * infantryLineDepth;
-        c = archers.Count - 1;
-        for (int i = 0; i < archers.Count; i++)
+        c = archersStats.Count - 1;
+        for (int i = 0; i < archersStats.Count; i++)
         {
             Vector3 curPos = start * (i / c) + end * (1 - i / c);
-            var u = archers.ElementAt(i);
+            var u = archersStats.ElementAt(i);
 
             if (debug)
                 DrawArcherAtPos(curPos, u);
@@ -161,7 +311,7 @@ public class ArmyNew : MonoBehaviour
         Gizmos.DrawLine(backRight + Vector3.up, frontRight + Vector3.up);
     }
 
-    private void AddMeleeAtPos(Vector3 pos, string name, MeleeStats u, int i, GameObject[] list)
+    private void AddMeleeAtPos(Vector3 pos, string name, MeleeStats u, int i, List<UnitNew> list)
     {
         var curUnit = new GameObject(name+" (" + i + ")");
         curUnit.transform.position = pos;
@@ -170,7 +320,8 @@ public class ArmyNew : MonoBehaviour
 
         var unitMB = curUnit.AddComponent<UnitNew>();
         unitMB.Instantiate(pos, transform.forward, u.meleeHolder, soldiersHolder, u.soldierPrefab, this);
-        list[i] = curUnit;
+        unitMB.ID = i;
+        list.Add(unitMB);
         units.Add(unitMB);
 
         var frontExp = CalculateFrontalExpansion(u.meleeHolder.soldierDistVertical, u.meleeHolder.startingNumOfSoldiers, u.meleeHolder.startingCols, expansion);
@@ -210,10 +361,9 @@ public class ArmyNew : MonoBehaviour
         curUnit.transform.position = pos;
         curUnit.transform.rotation = Quaternion.LookRotation(transform.forward);
         curUnit.transform.parent = transform;
-        archerUnits[i] = curUnit;
 
         var unitMB = AddArcherComponent(curUnit, pos, u.meleeStats.meleeHolder, u.meleeStats.soldierPrefab, u.rangedStats.rangedHolder, u.rangedStats.arrow);
-
+        unitMB.ID = i;
         AddRangedCollider(curUnit, unitMB, u.rangedStats.rangedHolder.range);
 
         float frontExp = CalculateFrontalExpansion(u.meleeStats.meleeHolder.soldierDistVertical, u.meleeStats.meleeHolder.startingNumOfSoldiers, u.meleeStats.meleeHolder.startingCols, expansion);
@@ -225,6 +375,9 @@ public class ArmyNew : MonoBehaviour
         unitMB.rangeShader = sc.GetComponent<Projector>();
         unitMB.rangeShader.orthographicSize = u.rangedStats.rangedHolder.range + 5;
         unitMB.rangeShader.enabled = false;
+
+        archerUnits.Add(unitMB);
+
     }
 
 

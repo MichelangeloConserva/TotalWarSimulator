@@ -82,8 +82,6 @@ public class HumanNew : MonoBehaviour
         if (!selectedUnit) return;
 
 
-
-
         // FORMATION 
         if (Input.GetKey(KeyCode.LeftShift) && Input.GetMouseButton(1))
         {
@@ -114,51 +112,43 @@ public class HumanNew : MonoBehaviour
 
 
         if (Input.GetKeyDown(KeyCode.R))
-        {
-            Debug.Log("reload");
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        }
 
         if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            Debug.Log("quit");
             Application.Quit();
-        }
 
     }
 
     private IEnumerator DrawRangedUnitsShaderCO()
     {
         var wfs = new WaitForSeconds(rangedShaderSkiptime);
+        ArcherNew c;
+        Ray ray;
+        RaycastHit[] hits;
+
         yield return wfs;
 
         while (true)
         {
-            ArcherNew c;
-            foreach (var a in armies[0].archerUnits)
-                if ((c = a.GetComponent<ArcherNew>()) != selectedArcher)
-                    c.rangeShader.enabled = false;
-            foreach (var a in armies[1].archerUnits)
-                if ((c = a.GetComponent<ArcherNew>()) != selectedArcher)
-                    c.rangeShader.enabled = false;
+            foreach( var cc in armies[0].archerUnits)
+                if (cc != selectedArcher)
+                        cc.rangeShader.enabled = false;
+            foreach (var cc in armies[1].archerUnits)
+                if (cc != selectedArcher)
+                    cc.rangeShader.enabled = false;
 
-
-            ArcherNew aa;
-            var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit[] hits;
+            ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             if ((hits = Physics.RaycastAll(ray, 10000, allUnits)).Length != 0)
             {
                 foreach (var hit in hits)
                 {
                     if (hit.collider.gameObject.CompareTag("Melee"))
-                        if (aa = hit.collider.gameObject.GetComponentInParent<ArcherNew>())
-                            aa.rangeShader.enabled = true;
+                        if (c = hit.collider.gameObject.GetComponentInParent<ArcherNew>())
+                            c.rangeShader.enabled = true;
                 }
             }
             yield return wfs;
         }
-        
-        
     }
 
 
@@ -184,6 +174,7 @@ public class HumanNew : MonoBehaviour
 
         int numOfCols = selectedUnit.unit.numCols;
         float latDist = selectedUnit.unit.soldierDistLateral;
+        float curLength = 0;
         finalDir = mouseClick - selectedUnit.transform.position;
         ghosts = Enumerable.Range(0, selectedUnit.unit.numOfSoldiers).Select(i => Instantiate(ghostPrefab, transform)).ToList();
 
@@ -204,7 +195,7 @@ public class HumanNew : MonoBehaviour
             numOfCols = (int)(lastDir.magnitude / latDist) + 1;
             Vector2 perp = Vector2.Perpendicular(new Vector2(lastDir.x, lastDir.z));
             finalDir = new Vector3(perp.x, 0, perp.y);
-            var curLength = GetHalfLenght(selectedUnit.unit.soldierDistLateral, numOfCols);
+            curLength = GetHalfLenght(selectedUnit.unit.soldierDistLateral, numOfCols);
             var res = GetFormationAtPos(mouseClick + lastDir.normalized * curLength, finalDir, selectedUnit.unit.numOfSoldiers, numOfCols, selectedUnit.unit.soldierDistLateral, selectedUnit.unit.soldierDistVertical);
 
             for(int i=0; i<selectedUnit.unit.numOfSoldiers; i++)
@@ -222,7 +213,7 @@ public class HumanNew : MonoBehaviour
         if (selectedUnit)
         {
             selectedUnit.unit.numCols = numOfCols;
-            selectedUnit.MoveAt(mouseClick, finalDir);
+            selectedUnit.MoveAt(mouseClick + lastDir.normalized * curLength, finalDir);
         }
     }
 
@@ -237,8 +228,6 @@ public class HumanNew : MonoBehaviour
             var path = cu.pathCreator.path;
             lr = cu.unit.lr;
             lr.enabled = true;
-
-            Debug.Log(path.NumPoints);
 
             if (path.NumPoints != 30)
             {

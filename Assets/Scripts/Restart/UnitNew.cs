@@ -1,4 +1,5 @@
-﻿using PathCreation;
+﻿using NetTopologySuite.Geometries;
+using PathCreation;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -21,7 +22,7 @@ public class UnitNew : MonoBehaviour
     public UnitNew fightingTarget;
     public UnitNew commandTarget;
 
-
+    public int ID;
 
 
     public List<SoldierNew> soldiers;
@@ -37,6 +38,33 @@ public class UnitNew : MonoBehaviour
     public float pathSpeed;
 
     private bool _isSelected, _inFight;
+
+    public float halfWidth { get { return meleeCollider.size.x / 2f; } }
+    public float halfHeight { get { return meleeCollider.size.z / 2f; } }
+
+
+
+    public Coordinate[] rectangle
+    {
+        get
+        {
+            var pp = new Vector2(position.x, position.z);
+            var ff = new Vector2( (transform.forward * halfHeight).x, (transform.forward * halfHeight).z);
+            var rr = new Vector2( (transform.right * halfWidth).x, (transform.right * halfWidth).z);
+
+            return new Coordinate[]
+            {
+                new Coordinate((float)(pp+ff+rr).x, (float)(pp+ff+rr).y),
+                new Coordinate((float)(pp-ff+rr).x, (float)(pp-ff+rr).y),
+                new Coordinate((float)(pp-ff-rr).x, (float)(pp-ff-rr).y),
+                new Coordinate((float)(pp+ff-rr).x, (float)(pp+ff-rr).y),
+                new Coordinate((float)(pp+ff+rr).x, (float)(pp+ff+rr).y)
+            };
+        }
+    }
+
+
+
 
     public int numOfSoldiers 
     { get { return soldiers.Count; } }
