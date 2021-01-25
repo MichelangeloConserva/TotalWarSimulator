@@ -11,3 +11,5 @@ Feel free to drop me a message for further information.
 State of the project:
 
 ![](Assets/Recordings/TWRelease010.gif)
+
+Disclaimer: This is not a Creative Assembly product.
