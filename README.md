@@ -27,4 +27,14 @@ You can try the simulator yourself by downloading the build from the [latest rel
 
 ![](Assets/Recordings/TWRelease010.gif)
 
+### Latest screenshots:
+
+<p float="left">
+  <img src="Media/tw_state.png" height="150" />
+  <img src="Media/archers.png" height="150" /> 
+  <img src="Media/fight.png" height="150" />
+</p>
+
+
+
 Disclaimer: This is not a Creative Assembly product.
